@@ -11,6 +11,9 @@
         "prisma:migrate": "prisma migrate dev",
         "prisma:generate": "prisma generate",
         "prisma:studio": "prisma studio",
+        "prisma:push": "prisma db push",
+        "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+        "db:reset": "prisma migrate reset --force && npm run seed",
         "test": "jest --passWithNoTests"
     },
     "dependencies": {
@@ -52,6 +55,7 @@
         "@types/jest": "^30.0.0",
         "@types/node": "22.5.4",
         "@types/passport-jwt": "4.0.1",
+        "@types/pdfkit": "^0.13.9",
         "fast-check": "^4.8.0",
         "jest": "^30.4.2",
         "prisma": "5.18.0",

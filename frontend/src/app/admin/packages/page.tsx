@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { IconPackage, IconCheck, IconAlertTriangle } from '@/components/ui/Icon'
 
 interface PackageItem {
     item_type: string
@@ -170,13 +171,13 @@ export default function AdminPackagesPage() {
 
             {/* Notifications */}
             {success && (
-                <div className="p-4 rounded-xl text-sm font-semibold" style={{ background: '#E8F5E920', color: '#4ADE80', border: '1px solid #4ADE8040' }}>
-                    ✅ {success}
+                <div className="p-4 rounded-xl text-sm font-semibold flex items-center gap-2" style={{ background: '#E8F5E920', color: '#4ADE80', border: '1px solid #4ADE8040' }}>
+                    <IconCheck size={14} color="#4ADE80" /> {success}
                 </div>
             )}
             {error && (
-                <div className="p-4 rounded-xl text-sm font-semibold" style={{ background: '#FCE4EC20', color: '#F87171', border: '1px solid #F8717140' }}>
-                    ⚠️ {error}
+                <div className="p-4 rounded-xl text-sm font-semibold flex items-center gap-2" style={{ background: '#FCE4EC20', color: '#F87171', border: '1px solid #F8717140' }}>
+                    <IconAlertTriangle size={14} color="#F87171" /> {error}
                 </div>
             )}
 
@@ -335,7 +336,9 @@ export default function AdminPackagesPage() {
                     </div>
                 ) : packages.length === 0 ? (
                     <div className="p-10 text-center text-gray-500">
-                        <div className="text-4xl mb-3">📦</div>
+                        <div className="w-16 h-16 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: '#1B433220' }}>
+                            <IconPackage size={28} color="#4ADE80" />
+                        </div>
                         <p>هنوز پکیجی ساخته نشده</p>
                     </div>
                 ) : (

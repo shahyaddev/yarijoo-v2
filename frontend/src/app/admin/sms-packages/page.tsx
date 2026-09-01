@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { IconSms, IconCheck, IconAlertTriangle } from '@/components/ui/Icon'
 
 interface SmsPackage {
     id: string
@@ -151,13 +152,13 @@ export default function AdminSmsPackagesPage() {
 
             {/* Notifications */}
             {success && (
-                <div className="p-4 rounded-xl text-sm font-semibold" style={{ background: '#E8F5E920', color: '#4ADE80', border: '1px solid #4ADE8040' }}>
-                    ✅ {success}
+                <div className="p-4 rounded-xl text-sm font-semibold flex items-center gap-2" style={{ background: '#E8F5E920', color: '#4ADE80', border: '1px solid #4ADE8040' }}>
+                    <IconCheck size={14} color="#4ADE80" /> {success}
                 </div>
             )}
             {error && (
-                <div className="p-4 rounded-xl text-sm font-semibold" style={{ background: '#FCE4EC20', color: '#F87171', border: '1px solid #F8717140' }}>
-                    ⚠️ {error}
+                <div className="p-4 rounded-xl text-sm font-semibold flex items-center gap-2" style={{ background: '#FCE4EC20', color: '#F87171', border: '1px solid #F8717140' }}>
+                    <IconAlertTriangle size={14} color="#F87171" /> {error}
                 </div>
             )}
 
@@ -244,7 +245,7 @@ export default function AdminSmsPackagesPage() {
                                         <span className="text-xs text-gray-500 w-12 shrink-0">روز {msg.day_number}</span>
                                         <div className="flex-1 h-px bg-gray-800" />
                                         {msg.message.trim()
-                                            ? <span className="text-xs text-green-500">✓</span>
+                                            ? <IconCheck size={12} color="#4ADE80" />
                                             : <span className="text-xs text-gray-600">خالی</span>
                                         }
                                     </div>
@@ -299,7 +300,9 @@ export default function AdminSmsPackagesPage() {
                     </div>
                 ) : packages.length === 0 ? (
                     <div className="rounded-xl border border-gray-800 p-10 text-center" style={{ background: '#111827' }}>
-                        <div className="text-4xl mb-3">📱</div>
+                        <div className="w-16 h-16 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: '#1B433220' }}>
+                            <IconSms size={28} color="#4ADE80" />
+                        </div>
                         <p className="text-gray-500">هنوز پکیج پیامکی ساخته نشده</p>
                     </div>
                 ) : (
@@ -307,8 +310,8 @@ export default function AdminSmsPackagesPage() {
                         <div key={pkg.id} className="rounded-xl border border-gray-800 overflow-hidden" style={{ background: '#111827' }}>
                             <div className="flex items-center justify-between px-5 py-4">
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ background: '#1B433220' }}>
-                                        📱
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#1B433220' }}>
+                                        <IconSms size={18} color="#4ADE80" />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <div className="font-semibold text-gray-200">{pkg.title}</div>

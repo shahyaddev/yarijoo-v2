@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/auth.store'
+import { IconBrain, IconShop, IconDoctor, IconCalendar, IconTicket, IconBell, IconUser, IconPackage, IconBook } from '@/components/ui/Icon'
 import api from '@/lib/api'
 
 interface DashboardData {
@@ -14,22 +15,32 @@ interface DashboardData {
 }
 
 const STATUS_MAP: Record<string, string> = {
-    COMPLETED: 'تکمیل شده',
-    IN_PROGRESS: 'در حال انجام',
-    PAID: 'پرداخت شده',
-    PENDING: 'در انتظار',
-    CONFIRMED: 'تأیید شده',
-    CANCELLED: 'لغو شده',
+    COMPLETED: 'تکمیل شده', IN_PROGRESS: 'در حال انجام',
+    PAID: 'پرداخت شده', PENDING: 'در انتظار',
+    CONFIRMED: 'تأیید شده', CANCELLED: 'لغو شده',
+}
+const STATUS_COLOR: Record<string, string> = {
+    COMPLETED: '#1B4332', PAID: '#1B4332', IN_PROGRESS: '#C9A84C',
+    PENDING: '#C9A84C', CONFIRMED: '#1565C0', CANCELLED: '#C62828',
 }
 
-const STATUS_COLOR: Record<string, string> = {
-    COMPLETED: '#1B4332',
-    PAID: '#1B4332',
-    IN_PROGRESS: '#C9A84C',
-    PENDING: '#C9A84C',
-    CONFIRMED: '#1565C0',
-    CANCELLED: '#C62828',
-}
+const QUICK_ACTIONS = [
+    { icon: <IconBrain size={20} color="#1B4332" />, label: 'تست جدید',           href: '/tests',                  color: '#E8F5E9' },
+    { icon: <IconBook  size={20} color="#1565C0" />, label: 'کتاب‌خانه',          href: '/books',                  color: '#E3F2FD' },
+    { icon: <IconDoctor size={20} color="#6A1B9A" />, label: 'رزرو مشاوره',       href: '/psychologists',          color: '#F3E5F5' },
+    { icon: <IconCalendar size={20} color="#C9A84C" />, label: 'تقویم',           href: '/dashboard/planner',      color: '#FFF8E1' },
+    { icon: <IconTicket size={20} color="#C62828" />, label: 'تیکت پشتیبانی',    href: '/dashboard/tickets',      color: '#FCE4EC' },
+    { icon: <IconBell  size={20} color="#00695C" />, label: 'اعلان‌ها',           href: '/dashboard/notifications',color: '#E0F7FA' },
+    { icon: <IconUser  size={20} color="#5C5C5E" />, label: 'پروفایل',            href: '/dashboard/profile',      color: '#F3EDE3' },
+    { icon: <IconPackage size={20} color="#795548" />, label: 'سفارشات',          href: '/dashboard/orders',       color: '#EDE6D6' },
+]
+
+const STATS_ICONS = [
+    { icon: <IconBrain size={20} color="#1B4332" />, color: '#E8F5E9' },
+    { icon: <IconShop  size={20} color="#1565C0" />, color: '#E3F2FD' },
+    { icon: <IconCalendar size={20} color="#6A1B9A" />, color: '#F3E5F5' },
+    { icon: <IconBell  size={20} color="#C9A84C" />, color: '#FFF8E1' },
+]
 
 export default function DashboardPage() {
     const { user } = useAuthStore()
@@ -43,14 +54,19 @@ export default function DashboardPage() {
             api.get('/notifications?limit=5').catch(() => ({ data: { data: [] } })),
             api.get('/appointments?limit=5').catch(() => ({ data: { data: { appointments: [] } } })),
         ]).then(([testsRes, ordersRes, notifRes, apptRes]) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const attempts = (testsRes.data as any)?.data?.attempts ?? []
-            const orders = (ordersRes.data as any)?.data?.orders ?? []
-            const notifs = (notifRes.data as any)?.data ?? []
-            const appts = (apptRes.data as any)?.data?.appointments ?? []
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const orders   = (ordersRes.data as any)?.data?.orders   ?? []
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const notifs   = (notifRes.data  as any)?.data            ?? []
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const appts    = (apptRes.data   as any)?.data?.appointments ?? []
             setData({
                 testAttempts: attempts.length,
                 orders: orders.length,
                 appointments: appts.length,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 notifications: Array.isArray(notifs) ? notifs.filter((n: any) => !n.isRead).length : 0,
                 recentTests: attempts.slice(0, 4),
                 recentOrders: orders.slice(0, 4),
@@ -65,22 +81,29 @@ export default function DashboardPage() {
         return 'عصر بخیر'
     }
 
+    const stats = [
+        { label: 'تست انجام شده',  value: loading ? '…' : String(data?.testAttempts ?? 0), href: '/dashboard/my-tests' },
+        { label: 'سفارشات',        value: loading ? '…' : String(data?.orders       ?? 0), href: '/dashboard/orders' },
+        { label: 'نوبت مشاوره',    value: loading ? '…' : String(data?.appointments  ?? 0), href: '/dashboard/appointments' },
+        { label: 'اعلان‌های جدید', value: loading ? '…' : String(data?.notifications ?? 0), href: '/dashboard/notifications' },
+    ]
+
     return (
         <div className="space-y-6">
             {/* Welcome banner */}
             <div className="rounded-2xl p-6 text-white" style={{
-                background: 'linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%)',
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='30' r='22' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1'/%3E%3Ccircle cx='30' cy='30' r='12' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1'/%3E%3C/svg%3E")`,
-                backgroundSize: '60px 60px',
+                background: 'linear-gradient(135deg,#1B4332 0%,#2D6A4F 100%)',
             }}>
                 <p className="text-sm opacity-70 mb-1">{greeting()}</p>
-                <h1 className="text-2xl font-black mb-1">{user?.fullName ?? user?.phone ?? 'کاربر عزیز'} 👋</h1>
+                <h1 className="text-2xl font-black mb-1">
+                    {user?.fullName ?? user?.phone ?? 'کاربر عزیز'}
+                </h1>
                 <div className="flex items-center gap-2 mt-3">
                     <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: 'rgba(255,255,255,0.15)' }}>
                         اشتراک: {user?.subscriptionLevel === 'FREE' ? 'رایگان' : user?.subscriptionLevel}
                     </span>
                     {user?.subscriptionLevel === 'FREE' && (
-                        <Link href="/pricing" className="text-xs px-2.5 py-1 rounded-full font-semibold transition-colors hover:opacity-90"
+                        <Link href="/pricing" className="text-xs px-2.5 py-1 rounded-full font-semibold hover:opacity-90"
                             style={{ background: '#C9A84C', color: 'white' }}>
                             ارتقا به پریمیوم ←
                         </Link>
@@ -90,17 +113,13 @@ export default function DashboardPage() {
 
             {/* Quick stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { label: 'تست انجام شده', value: loading ? '…' : String(data?.testAttempts ?? 0), icon: '🧠', href: '/dashboard/my-tests', color: '#E8F5E9' },
-                    { label: 'سفارشات', value: loading ? '…' : String(data?.orders ?? 0), icon: '🛍️', href: '/dashboard/orders', color: '#E3F2FD' },
-                    { label: 'نوبت مشاوره', value: loading ? '…' : String(data?.appointments ?? 0), icon: '📅', href: '/dashboard/appointments', color: '#F3E5F5' },
-                    { label: 'اعلان‌های جدید', value: loading ? '…' : String(data?.notifications ?? 0), icon: '🔔', href: '/dashboard/notifications', color: '#FFF8E1' },
-                ].map(s => (
+                {stats.map((s, i) => (
                     <Link key={s.label} href={s.href}
-                        className="group block rounded-2xl p-5 border transition-all hover:-translate-y-0.5 hover:shadow-md"
+                        className="block rounded-2xl p-5 border transition-all hover:-translate-y-0.5 hover:shadow-md"
                         style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3" style={{ background: s.color }}>
-                            {s.icon}
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                            style={{ background: STATS_ICONS[i].color }}>
+                            {STATS_ICONS[i].icon}
                         </div>
                         <div className="text-2xl font-black mb-1" style={{ color: '#1C1C1E' }}>{s.value}</div>
                         <div className="text-xs" style={{ color: '#8C8C8E' }}>{s.label}</div>
@@ -116,10 +135,12 @@ export default function DashboardPage() {
                         <Link href="/dashboard/my-tests" className="text-xs font-semibold" style={{ color: '#1B4332' }}>مشاهده همه</Link>
                     </div>
                     {loading ? (
-                        <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: '#F3EDE3' }} />)}</div>
-                    ) : data?.recentTests.length === 0 ? (
+                        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: '#F3EDE3' }} />)}</div>
+                    ) : !data?.recentTests.length ? (
                         <div className="text-center py-8">
-                            <div className="text-3xl mb-2">🧠</div>
+                            <div className="w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center" style={{ background: '#E8F5E9' }}>
+                                <IconBrain size={24} color="#1B4332" />
+                            </div>
                             <p className="text-sm" style={{ color: '#8C8C8E' }}>هنوز تستی انجام ندادید</p>
                             <Link href="/tests" className="inline-block mt-3 text-xs font-bold px-4 py-2 rounded-xl text-white" style={{ background: '#1B4332' }}>شروع تست</Link>
                         </div>
@@ -148,10 +169,12 @@ export default function DashboardPage() {
                         <Link href="/dashboard/orders" className="text-xs font-semibold" style={{ color: '#1B4332' }}>مشاهده همه</Link>
                     </div>
                     {loading ? (
-                        <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: '#F3EDE3' }} />)}</div>
-                    ) : data?.recentOrders.length === 0 ? (
+                        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: '#F3EDE3' }} />)}</div>
+                    ) : !data?.recentOrders.length ? (
                         <div className="text-center py-8">
-                            <div className="text-3xl mb-2">🛍️</div>
+                            <div className="w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center" style={{ background: '#E3F2FD' }}>
+                                <IconShop size={24} color="#1565C0" />
+                            </div>
                             <p className="text-sm" style={{ color: '#8C8C8E' }}>هنوز خریدی نداشتید</p>
                             <Link href="/shop" className="inline-block mt-3 text-xs font-bold px-4 py-2 rounded-xl text-white" style={{ background: '#1B4332' }}>رفتن به فروشگاه</Link>
                         </div>
@@ -160,12 +183,8 @@ export default function DashboardPage() {
                             {data?.recentOrders.map(o => (
                                 <div key={o.id} className="flex items-center justify-between py-2 border-b last:border-0" style={{ borderColor: '#F3EDE3' }}>
                                     <div>
-                                        <p className="text-sm font-semibold" style={{ color: '#1C1C1E' }}>
-                                            {o.totalAmount.toLocaleString('fa-IR')} تومان
-                                        </p>
-                                        <p className="text-xs mt-0.5" style={{ color: '#8C8C8E' }}>
-                                            {new Date(o.createdAt).toLocaleDateString('fa-IR')}
-                                        </p>
+                                        <p className="text-sm font-semibold" style={{ color: '#1C1C1E' }}>{o.totalAmount.toLocaleString('fa-IR')} تومان</p>
+                                        <p className="text-xs mt-0.5" style={{ color: '#8C8C8E' }}>{new Date(o.createdAt).toLocaleDateString('fa-IR')}</p>
                                     </div>
                                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
                                         style={{ background: `${STATUS_COLOR[o.status]}15`, color: STATUS_COLOR[o.status] ?? '#8C8C8E' }}>
@@ -182,20 +201,13 @@ export default function DashboardPage() {
             <div>
                 <h2 className="font-bold text-[15px] mb-4" style={{ color: '#1C1C1E' }}>دسترسی سریع</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                        { icon: '🧠', label: 'تست جدید', href: '/tests', color: '#E8F5E9' },
-                        { icon: '📚', label: 'کتاب‌خانه', href: '/books', color: '#E3F2FD' },
-                        { icon: '👩‍⚕️', label: 'رزرو مشاوره', href: '/psychologists', color: '#F3E5F5' },
-                        { icon: '📅', label: 'تقویم برنامه‌ریزی', href: '/dashboard/planner', color: '#FFF8E1' },
-                        { icon: '🎟️', label: 'تیکت پشتیبانی', href: '/dashboard/tickets', color: '#FCE4EC' },
-                        { icon: '🔔', label: 'اعلان‌ها', href: '/dashboard/notifications', color: '#E0F7FA' },
-                        { icon: '👤', label: 'پروفایل', href: '/dashboard/profile', color: '#F3EDE3' },
-                        { icon: '📦', label: 'سفارشات', href: '/dashboard/orders', color: '#EDE6D6' },
-                    ].map(a => (
+                    {QUICK_ACTIONS.map(a => (
                         <Link key={a.href} href={a.href}
                             className="flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-md"
                             style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: a.color }}>{a.icon}</div>
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: a.color }}>
+                                {a.icon}
+                            </div>
                             <span className="text-xs font-semibold text-center" style={{ color: '#3C3C3E' }}>{a.label}</span>
                         </Link>
                     ))}

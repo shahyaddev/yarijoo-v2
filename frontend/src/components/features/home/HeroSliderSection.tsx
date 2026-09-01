@@ -218,10 +218,10 @@ function PackagesPanel({ products }: { products: Product[] }) {
                                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                                 >
                                     <div
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm"
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                                         style={{ background: b.bg }}
                                     >
-                                        📦
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={b.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[12px] font-semibold truncate" style={{ color: '#1C1C1E' }}>
