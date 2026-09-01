@@ -1,0 +1,6 @@
+# Place your SSL certificate files here (NOT committed to version control):
+#   fullchain.pem   — full certificate chain
+#   privkey.pem     — private key
+#
+# These files are referenced by nginx/nginx.conf for SSL termination.
+# Obtain certificates from Let's Encrypt (certbot) or your CA.

@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Yarijoo Platform V2 — Production override
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# What this file adds / overrides:
+#   • Removes source-mount volumes (use compiled images instead)
+#   • Builds backend / frontend with the `runner` (production) stage
+#   • Adds the Nginx reverse proxy with SSL termination, gzip, and caching
+#   • Removes host-exposed ports for postgres / redis / minio (not needed)
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: '3.9'
+
+services:
+  # ─────────────────────────────────────────────
+  # PostgreSQL — prod overrides
+  # ─────────────────────────────────────────────
+  postgres:
+    ports: [] # do not expose DB port to the host in production
+
+  # ─────────────────────────────────────────────
+  # Redis — prod overrides
+  # ─────────────────────────────────────────────
+  redis:
+    ports: [] # do not expose Redis port to the host in production
+
+  # ─────────────────────────────────────────────
+  # MinIO — prod overrides (console only for admin)
+  # ─────────────────────────────────────────────
+  minio:
+    ports:
+      - '9000:9000' # S3 API still accessible for presigned URLs if needed
+      # Console (9001) not published in production
+
+      # ─────────────────────────────────────────────
+      # NestJS Backend — production build
+      # ─────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runner # multi-stage production target
+    # Remove development volume mounts
+    volumes: []
+    environment:
+      NODE_ENV: production
+    # Port only accessible inside the Docker network (Nginx proxies it)
+    ports: []
+
+  # ─────────────────────────────────────────────
+  # Next.js Frontend — production build
+  # ─────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner # standalone output stage
+      args:
+        NEXT_PUBLIC_API_URL: ${BACKEND_URL:-https://yarijoo.ir}
+    # Remove development volume mounts
+    volumes: []
+    environment:
+      NODE_ENV: production
+    # Port only accessible inside the Docker network (Nginx proxies it)
+    ports: []
+
+  # ─────────────────────────────────────────────
+  # Nginx — SSL termination + reverse proxy
+  # ─────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: yarijoo_nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # Nginx config
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # SSL certificates (place fullchain.pem + privkey.pem here)
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      # Nginx logs
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: [ 'CMD', 'nginx', '-t' ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - yarijoo_net
+
+# ─────────────────────────────────────────────
+# Extra volumes for production
+# ─────────────────────────────────────────────
+volumes:
+  nginx_logs:
+    driver: local

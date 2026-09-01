@@ -1,0 +1,41 @@
+{
+    "name": "@yarijoo/frontend",
+    "version": "2.0.0",
+    "description": "Next.js 15 frontend for Yarijoo Platform V2",
+    "private": true,
+    "scripts": {
+        "dev": "next dev -p 3001",
+        "build": "next build",
+        "start": "next start -p 3001",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "@tanstack/react-query": "5.56.2",
+        "@types/pg": "^8.20.0",
+        "axios": "1.7.7",
+        "clsx": "2.1.1",
+        "framer-motion": "11.18.2",
+        "hls.js": "^1.5.18",
+        "next": "^16.3.4",
+        "pg": "^8.22.0",
+        "react": "19.0.0",
+        "react-dom": "19.0.0",
+        "react-hook-form": "7.53.2",
+        "react-hot-toast": "2.4.1",
+        "socket.io-client": "4.7.5",
+        "swiper": "11.1.15",
+        "tailwind-merge": "2.5.2",
+        "zustand": "5.0.1"
+    },
+    "devDependencies": {
+        "@types/node": "22.5.4",
+        "@types/react": "19.0.0",
+        "@types/react-dom": "19.0.0",
+        "autoprefixer": "10.4.20",
+        "eslint": "^10.9.1",
+        "eslint-config-next": "^16.3.4",
+        "postcss": "^8.5.26",
+        "tailwindcss": "3.4.14",
+        "typescript": "5.5.4"
+    }
+}

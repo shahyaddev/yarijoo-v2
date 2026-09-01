@@ -1,0 +1,14 @@
+{
+    "name": "@yarijoo/shared",
+    "version": "2.0.0",
+    "description": "Shared types, utilities, and constants for Yarijoo Platform V2",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3"
+    }
+}
