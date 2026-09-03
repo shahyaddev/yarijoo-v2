@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { imgUrl } from '@/lib/imgUrl'
 
 export const revalidate = 60
 
@@ -27,10 +28,7 @@ interface PageProps {
 }
 
 function storyImg(path: string | null | undefined): string | null {
-    if (!path) return null
-    if (path.startsWith('http')) return path
-    const filename = path.split('/').pop()
-    return `/uploads/stories/${filename}`
+    return imgUrl(path)
 }
 
 function stripHtml(html: string): string {

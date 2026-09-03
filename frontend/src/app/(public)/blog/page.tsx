@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { imgUrl } from '@/lib/imgUrl'
 
 export const revalidate = 300
 
@@ -34,11 +35,6 @@ interface PageProps {
     searchParams: Promise<{ page?: string; category?: string }>
 }
 
-function imgUrl(path: string | null | undefined): string | null {
-    if (!path) return null
-    if (path.startsWith('http')) return path
-    return `https://api.yarijoo.ir${path.startsWith('/') ? '' : '/'}${path}`
-}
 
 async function getPosts(page = 1) {
     try {

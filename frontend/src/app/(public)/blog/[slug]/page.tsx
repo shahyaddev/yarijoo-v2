@@ -1,6 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import {
+    IconArrowLeft,
+    IconCalendar,
+    IconClock,
+    IconNewspaper,
+    IconSms,
+    IconMessage,
+} from '@/components/ui/Icon'
+import { imgUrl } from '@/lib/imgUrl'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3333/api/v1'
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://yarijoo.com'
@@ -20,11 +29,6 @@ interface BlogPost {
 
 interface PageProps { params: Promise<{ slug: string }> }
 
-function imgUrl(path: string | null | undefined): string | null {
-    if (!path) return null
-    if (path.startsWith('http')) return path
-    return path.startsWith('/') ? path : `/${path}`
-}
 
 async function getPost(slug: string): Promise<BlogPost | null> {
     try {
@@ -72,42 +76,66 @@ export default async function ArticlePage({ params }: PageProps) {
     const src = imgUrl(post.coverImage)
     const date = post.publishedAt
         ? new Date(post.publishedAt).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' })
-        : ''
+        : null
 
     return (
         <div style={{ background: '#FAF7F2', minHeight: '100vh' }}>
-            <article className="max-w-3xl mx-auto px-5 py-12">
-                {/* Back */}
-                <Link href="/blog"
-                    className="inline-flex items-center gap-2 text-sm font-semibold mb-8 hover:opacity-70 transition-opacity"
-                    style={{ color: '#1B4332' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                        <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                    بازگشت به مجله
-                </Link>
+            {/* Top bar */}
+            <div style={{ background: '#1B4332' }}>
+                <div className="max-w-3xl mx-auto px-5 py-4">
+                    <nav className="flex items-center gap-2 text-sm" aria-label="breadcrumb">
+                        <Link href="/blog"
+                            className="flex items-center gap-1.5 font-medium hover:opacity-80 transition-opacity"
+                            style={{ color: 'rgba(255,255,255,0.75)' }}>
+                            <IconArrowLeft size={14} color="rgba(255,255,255,0.75)" />
+                            مجله
+                        </Link>
+                        <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
+                        <span className="truncate max-w-[220px]" style={{ color: 'rgba(255,255,255,0.55)' }}>{post.title}</span>
+                    </nav>
+                </div>
+            </div>
+
+            <article className="max-w-3xl mx-auto px-5 py-10">
 
                 {/* Cover image */}
                 {src && (
-                    <div className="rounded-2xl overflow-hidden mb-8 shadow-md" style={{ maxHeight: '420px' }}>
+                    <div className="rounded-2xl overflow-hidden mb-8"
+                        style={{ maxHeight: 420, boxShadow: '0 4px 24px rgba(27,67,50,0.12)' }}>
                         <img src={src} alt={post.title} className="w-full h-full object-cover" />
                     </div>
                 )}
 
                 {/* Meta */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-4 flex-wrap text-sm" style={{ color: '#8C8C8E' }}>
-                        {date && <span>📅 {date}</span>}
-                        {post.readTime && <span>⏱ {post.readTime} دقیقه مطالعه</span>}
-                        <span>👁 {post.views.toLocaleString('fa-IR')} بازدید</span>
+                <div className="mb-5">
+                    <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
+                        {date && (
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                                style={{ background: '#F3EDE3', color: '#6B7280' }}>
+                                <IconCalendar size={11} color="#9CA3AF" />
+                                {date}
+                            </span>
+                        )}
+                        {post.readTime && (
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                                style={{ background: '#F3EDE3', color: '#6B7280' }}>
+                                <IconClock size={11} color="#9CA3AF" />
+                                {post.readTime} دقیقه مطالعه
+                            </span>
+                        )}
+                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                            style={{ background: '#F3EDE3', color: '#6B7280' }}>
+                            <IconNewspaper size={11} color="#9CA3AF" />
+                            {post.views.toLocaleString('fa-IR')} بازدید
+                        </span>
                     </div>
 
-                    <h1 className="text-2xl md:text-3xl font-black mb-4 leading-relaxed" style={{ color: '#1C1C1E' }}>
+                    <h1 className="text-2xl md:text-3xl font-black mb-3 leading-snug" style={{ color: '#1C1C1E' }}>
                         {post.title}
                     </h1>
 
                     {post.excerpt && (
-                        <p className="text-base leading-relaxed mb-4" style={{ color: '#5C5C5E' }}>
+                        <p className="text-base leading-loose mb-4" style={{ color: '#5C5C5E' }}>
                             {post.excerpt}
                         </p>
                     )}
@@ -116,7 +144,7 @@ export default async function ArticlePage({ params }: PageProps) {
                         <div className="flex flex-wrap gap-2">
                             {post.tags.map(tag => (
                                 <span key={tag} className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                                    style={{ background: '#E8F5E9', color: '#1B4332' }}>
+                                    style={{ background: '#D1FAE5', color: '#1B4332' }}>
                                     #{tag}
                                 </span>
                             ))}
@@ -125,41 +153,45 @@ export default async function ArticlePage({ params }: PageProps) {
                 </div>
 
                 {/* Content */}
-                <div
-                    className="rounded-2xl p-6 md:p-8 mb-10 border"
-                    style={{ background: 'white', borderColor: '#EDE6D6' }}
-                >
+                <div className="rounded-2xl p-6 md:p-8 mb-8 border"
+                    style={{ background: 'white', borderColor: '#EDE6D6' }}>
                     <div
                         className="blog-content"
-                        style={{
-                            fontSize: '16px',
-                            lineHeight: '2.2',
-                            color: '#2C2C2E',
-                            direction: 'rtl',
-                        }}
+                        style={{ fontSize: 16, lineHeight: '2.2', color: '#2C2C2E', direction: 'rtl' }}
                         dangerouslySetInnerHTML={{ __html: post.content }}
                     />
                 </div>
 
                 {/* Share */}
-                <div className="flex items-center gap-3 py-5 border-t border-b mb-10 flex-wrap" style={{ borderColor: '#EDE6D6' }}>
-                    <span className="text-sm font-semibold" style={{ color: '#5C5C5E' }}>اشتراک‌گذاری:</span>
-                    {[
-                        { label: '📱 واتساپ', bg: '#25D366', href: `https://wa.me/?text=${encodeURIComponent(post.title + ' ' + siteUrl + '/blog/' + slug)}` },
-                        { label: '✈️ تلگرام', bg: '#2CA5E0', href: `https://t.me/share/url?url=${encodeURIComponent(siteUrl + '/blog/' + slug)}&text=${encodeURIComponent(post.title)}` },
-                    ].map(s => (
-                        <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
-                            className="px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-                            style={{ background: s.bg }}>
-                            {s.label}
-                        </a>
-                    ))}
+                <div className="flex items-center gap-3 py-4 border-t border-b mb-10 flex-wrap"
+                    style={{ borderColor: '#EDE6D6' }}>
+                    <span className="text-xs font-semibold flex items-center gap-1.5" style={{ color: '#6B7280' }}>
+                        <IconMessage size={13} color="#9CA3AF" />
+                        اشتراک‌گذاری:
+                    </span>
+                    <a href={`https://wa.me/?text=${encodeURIComponent(post.title + ' ' + siteUrl + '/blog/' + slug)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold hover:opacity-90 transition-opacity"
+                        style={{ background: '#25D366' }}>
+                        <IconSms size={13} color="white" />
+                        واتساپ
+                    </a>
+                    <a href={`https://t.me/share/url?url=${encodeURIComponent(siteUrl + '/blog/' + slug)}&text=${encodeURIComponent(post.title)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold hover:opacity-90 transition-opacity"
+                        style={{ background: '#2CA5E0' }}>
+                        <IconMessage size={13} color="white" />
+                        تلگرام
+                    </a>
                 </div>
 
                 {/* Related */}
                 {related.length > 0 && (
                     <section>
-                        <h2 className="text-xl font-black mb-5" style={{ color: '#1C1C1E' }}>مقالات مرتبط</h2>
+                        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: '#1C1C1E' }}>
+                            <span className="w-1 h-4 rounded-full inline-block shrink-0" style={{ background: '#1B4332' }} />
+                            مقالات مرتبط
+                        </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {related.map(p => {
                                 const rsrc = imgUrl(p.coverImage)
@@ -167,13 +199,18 @@ export default async function ArticlePage({ params }: PageProps) {
                                     <Link key={p.id} href={`/blog/${p.slug}`}
                                         className="group block rounded-2xl overflow-hidden border hover:-translate-y-1 hover:shadow-md transition-all"
                                         style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                                        <div className="aspect-[16/9] overflow-hidden" style={{ background: '#F3EDE3' }}>
+                                        <div className="overflow-hidden" style={{ aspectRatio: '16/9', background: '#F3EDE3' }}>
                                             {rsrc
                                                 ? <img src={rsrc} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                                                : <div className="w-full h-full flex items-center justify-center text-3xl opacity-20">📰</div>}
+                                                : (
+                                                    <div className="w-full h-full flex items-center justify-center">
+                                                        <IconNewspaper size={32} color="#D6C9B3" />
+                                                    </div>
+                                                )}
                                         </div>
                                         <div className="p-3">
-                                            <p className="font-semibold text-sm line-clamp-2 group-hover:text-[#1B4332] transition-colors" style={{ color: '#1C1C1E' }}>
+                                            <p className="font-semibold text-sm line-clamp-2 group-hover:text-[#1B4332] transition-colors"
+                                                style={{ color: '#1C1C1E' }}>
                                                 {p.title}
                                             </p>
                                         </div>
@@ -186,16 +223,16 @@ export default async function ArticlePage({ params }: PageProps) {
             </article>
 
             <style>{`
-                .blog-content h1, .blog-content h2, .blog-content h3 { font-weight: 800; margin: 24px 0 12px; color: #1C1C1E; }
-                .blog-content h2 { font-size: 20px; }
-                .blog-content h3 { font-size: 17px; }
-                .blog-content p { margin: 0 0 14px; }
-                .blog-content ul, .blog-content ol { padding-right: 24px; margin: 0 0 14px; }
-                .blog-content li { margin-bottom: 8px; }
-                .blog-content strong { font-weight: 700; }
-                .blog-content a { color: #1B4332; text-decoration: underline; }
-                .blog-content img { border-radius: 12px; max-width: 100%; margin: 16px 0; }
-                .blog-content blockquote { border-right: 4px solid #1B4332; padding-right: 16px; margin: 16px 0; color: #5C5C5E; font-style: italic; }
+                .blog-content h1,.blog-content h2,.blog-content h3{font-weight:800;margin:24px 0 12px;color:#1C1C1E}
+                .blog-content h2{font-size:20px}
+                .blog-content h3{font-size:17px}
+                .blog-content p{margin:0 0 14px}
+                .blog-content ul,.blog-content ol{padding-right:24px;margin:0 0 14px}
+                .blog-content li{margin-bottom:8px}
+                .blog-content strong{font-weight:700}
+                .blog-content a{color:#1B4332;text-decoration:underline}
+                .blog-content img{border-radius:12px;max-width:100%;margin:16px 0}
+                .blog-content blockquote{border-right:4px solid #1B4332;padding-right:16px;margin:16px 0;color:#5C5C5E;font-style:italic}
             `}</style>
         </div>
     )

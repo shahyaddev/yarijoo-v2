@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { imgUrl } from '@/lib/imgUrl'
 
 // no-cache to always get fresh data
 export const revalidate = 0
@@ -27,10 +28,7 @@ interface PageProps {
 }
 
 function coverUrl(path: string | null | undefined): string | null {
-    if (!path) return null
-    if (path.startsWith('http')) return path
-    if (path.startsWith('/uploads')) return path
-    return `/${path}`
+    return imgUrl(path)
 }
 
 async function getBooks(page = 1) {

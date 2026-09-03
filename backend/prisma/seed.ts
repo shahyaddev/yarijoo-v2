@@ -881,77 +881,495 @@ async function seedPsychologists() {
   }
 }
 
-// ─── PRODUCTS ────────────────────────────────────────────────────────────────
+// ─── SHOP CATEGORIES (from legacy MySQL DB) ──────────────────────────────────
 
-async function seedProducts() {
-  console.log('🛍️ Seeding products…')
+async function seedShopCategories(): Promise<Record<number, string>> {
+  console.log('🗂️ Seeding shop categories…')
 
-  const products = [
+  // Only active/real categories (deleted_at IS NULL in source DB)
+  const cats = [
+    { legacyId: 16, name: 'زوج درمانی',        slug: 'shop-couple-therapy',   image: '/uploads/shop/69e35052446de.png' },
+    { legacyId: 17, name: 'اضطراب',             slug: 'shop-anxiety',          image: '/uploads/shop/69e352330a67d.png' },
+    { legacyId: 18, name: 'خشم',                slug: 'shop-anger',            image: '/uploads/shop/69e363038825a.png' },
+    { legacyId: 19, name: 'استرس',              slug: 'shop-stress',           image: '/uploads/shop/69e361c6acff5.png' },
+    { legacyId: 20, name: 'مشاوره',             slug: 'shop-counseling',       image: '/uploads/shop/69e361d2ed414.png' },
+    { legacyId: 21, name: 'ترس',                slug: 'shop-fear',             image: '/uploads/shop/69e361e1b783f.png' },
+    { legacyId: 23, name: 'موفقیت',             slug: 'shop-success',          image: '/uploads/shop/69e361eef3621.png' },
+    { legacyId: 24, name: 'کتاب',               slug: 'shop-book',             image: '/uploads/shop/69e3620963657.png' },
+    { legacyId: 25, name: 'ADHD',               slug: 'shop-adhd',             image: null },
+    { legacyId: 26, name: 'مهارت زندگی',        slug: 'shop-life-skills',      image: null },
+    { legacyId: 27, name: 'سبک‌های دلبستگی',   slug: 'shop-attachment',       image: null },
+    { legacyId: 28, name: 'التیام درون',        slug: 'shop-inner-healing',    image: null },
+    { legacyId: 29, name: 'عزت نفس',            slug: 'shop-self-esteem',      image: null },
+    { legacyId: 30, name: 'افسردگی',            slug: 'shop-depression',       image: null },
+    { legacyId: 31, name: 'خیانت',              slug: 'shop-betrayal',         image: null },
+    { legacyId: 32, name: 'صمیمیت در ازدواج',  slug: 'shop-marital-intimacy', image: null },
+    { legacyId: 33, name: 'صمیمیت جنسی',       slug: 'shop-sexual-intimacy',  image: null },
+    { legacyId: 34, name: 'مایندفولنس',         slug: 'shop-mindfulness',      image: null },
+    { legacyId: 35, name: 'جدید',               slug: 'shop-new',              image: null },
+  ]
+
+  const legacyIdToUuid: Record<number, string> = {}
+
+  for (const cat of cats) {
+    const record = await prisma.category.upsert({
+      where: { slug: cat.slug },
+      update: { name: cat.name },
+      create: { name: cat.name, slug: cat.slug, type: 'product' },
+    })
+    legacyIdToUuid[cat.legacyId] = record.id
+    console.log(`   ✓ Category: ${cat.name}`)
+  }
+
+  return legacyIdToUuid
+}
+
+// ─── PRODUCTS (from legacy MySQL DB) ─────────────────────────────────────────
+
+async function seedProducts(shopCategoryMap: Record<number, string>) {
+  console.log('🛍️ Seeding products from legacy DB…')
+
+  // gallery: productLegacyId → image paths (Uploads/shop/xxx → /uploads/shop/xxx)
+  const gallery: Record<number, string[]> = {
+    257: ['/uploads/shop/6813464f2e9e3.png'],
+    258: ['/uploads/shop/6812624da6c60.png'],
+    259: ['/uploads/shop/6812725e7410d.png'],
+    260: ['/uploads/shop/6813463a5f783.png'],
+    261: ['/uploads/shop/6813462bd1973.png'],
+    262: ['/uploads/shop/6813461d591b1.png'],
+    263: ['/uploads/shop/6813460fcb38a.png'],
+    265: ['/uploads/shop/68321fd1aff2e.png'],
+    266: ['/uploads/shop/68321dedce4d5.png'],
+    267: ['/uploads/shop/68175b0510985.png'],
+    268: ['/uploads/shop/68321dcea514c.png'],
+    269: ['/uploads/shop/68321dbde6b3d.png'],
+    270: [],
+    271: ['/uploads/shop/68321d8466772.png'],
+    272: ['/uploads/shop/68321d7338b79.png'],
+    273: ['/uploads/shop/68321d643f40e.png'],
+    274: ['/uploads/shop/68321d52264ff.png'],
+    275: ['/uploads/shop/69e48b03df5b7.png'],
+    276: ['/uploads/shop/6829cbb7a8a15.jpg'],
+    277: ['/uploads/shop/6891fd64b061f.jpg'],
+    278: [],
+    279: [],
+    280: [],
+    281: [],
+    282: [],
+    283: ['/uploads/shop/69dce0db7e889.jpg'],
+    284: ['/uploads/shop/69e48c682c088.jpg'],
+  }
+
+  // productLegacyId → categoryLegacyId (from shop_product_category, deduped)
+  const productCategoryMap: Record<number, number> = {
+    257: 23, 258: 23, 259: 23, 260: 23, 261: 23, 262: 25,
+    263: 26, 264: 21, 265: 27, 266: 28, 267: 17, 268: 17,
+    269: 29, 270: 30, 271: 16, 272: 32, 273: 33, 274: 16,
+    275: 16, 276: 16, 277: 21, 282: 20, 283: 20, 284: 20,
+  }
+
+  function makeSlug(title: string, legacyId: number): string {
+    // Use legacy ID as suffix to guarantee uniqueness for Persian slugs
+    const base = title
+      .replace(/[«»""'']/g, '')
+      .replace(/[:\-–—]/g, '-')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80)
+    return `product-${legacyId}-${base}`
+  }
+
+  const products: Array<{
+    legacyId: number
+    slug: string
+    title: string
+    description: string | null
+    price: number
+    salePrice: number | null
+    stock: number
+    type: string
+    categoryLegacyId: number | null
+    images: string[]
+    isActive: boolean
+  }> = [
     {
-      slug: 'stress-relief-kit',
-      title: 'پکیج مقابله با استرس',
-      description: 'شامل: ۳۰ روز برنامه ذهن‌آگاهی + ۵ صوت مراقبه + کتاب راهنما. همه در قالب دیجیتال.',
-      price: 185000,
-      salePrice: 145000,
-      stock: 999,
-      type: 'digital',
-    },
-    {
-      slug: 'sleep-improvement-program',
-      title: 'برنامه بهبود خواب (۴ هفته)',
-      description: 'یک برنامه گام‌به‌گام علمی برای بازگرداندن خواب سالم. شامل تکنیک‌های CBT-I و پروتکل ذهن‌آگاهی.',
-      price: 220000,
+      legacyId: 257,
+      slug: makeSlug('موفقیت-شغلی-شما-در-دستان-خودتان-است', 257),
+      title: 'موفقیت شغلی شما در دستان خودتان است!',
+      description: '<h1>موفقیت شغلی شما در دستان خودتان است!</h1><p>اگر به دنبال تغییرات واقعی در مسیر شغلی خود هستید، این فرصت برای شما طراحی شده است.</p><p>این برنامه شما را در هر قدم از مسیر همراهی می‌کند تا به طور ملموس و با نتایج قابل‌اندازه‌گیری پیشرفت کنید. این دوره شامل پیام‌های روزانه، تمرین‌های عملی و محتوای انگیزشی است.</p>',
+      price: 149000,
       salePrice: null,
-      stock: 999,
-      type: 'digital',
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 23,
+      images: gallery[257],
+      isActive: true,
     },
     {
-      slug: 'mindfulness-journal',
-      title: 'دفترچه تمرین ذهن‌آگاهی (فیزیکی)',
-      description: '۱۲۰ صفحه با تمرین‌های روزانه ذهن‌آگاهی، فضای نوشتاری، و راهنمای هفتگی. چاپ باکیفیت.',
-      price: 95000,
+      legacyId: 258,
+      slug: makeSlug('موفقیت-در-روابط-اجتماعی', 258),
+      title: 'موفقیت در روابط اجتماعی',
+      description: '<p>دوره «۳۰ روز تا موفقیت در روابط اجتماعی»؛ دریچه‌ای به دنیای جدید شما!</p><p>در این دوره ویژه، شما را به مهارتی مجهز می‌کنیم که زندگی واقعی‌تان را تغییر می‌دهد. در طی ۳۰ روز، هر روز با تکنیک‌های عملی، تمرین‌های روزانه و چالش‌های واقعی روبه‌رو می‌شوید.</p>',
+      price: 149000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 23,
+      images: gallery[258],
+      isActive: true,
+    },
+    {
+      legacyId: 259,
+      slug: makeSlug('دوره-جامع-از-انضباط-تا-موفقیت-تحصیلی', 259),
+      title: 'دوره جامع «از انضباط تا موفقیت تحصیلی»',
+      description: '<p>«از انضباط تا موفقیت تحصیلی» یک دوره ۳۰ روزه عملی، علمی و کاربردی است که با هدف ایجاد عادت‌های مثبت مطالعاتی، افزایش تمرکز و برنامه‌ریزی مؤثر طراحی شده است.</p>',
+      price: 288000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 23,
+      images: gallery[259],
+      isActive: true,
+    },
+    {
+      legacyId: 260,
+      slug: makeSlug('دوره-۲۱-روزه-موفقیت-مالی', 260),
+      title: 'دوره‌ی ۲۱ روزه موفقیت مالی',
+      description: '<p>آیا آماده‌ای تا زندگی مالی‌ات رو به طور کامل تغییر بدی؟ دوره‌ی ۲۱ روزه موفقیت مالی دقیقاً همون چیزیه که برای ایجاد تغییرات اساسی و بلندمدت نیاز داری.</p><p>یاد می‌گیری چطور ذهنیت مالی‌ات رو تغییر بدی، پول رو مدیریت کنی و درآمد غیرفعال بسازی.</p>',
+      price: 500000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 23,
+      images: gallery[260],
+      isActive: true,
+    },
+    {
+      legacyId: 261,
+      slug: makeSlug('۳۰-طلوع-تا-بیداری-سفر-روزانه-به-درون-حکمت', 261),
+      title: '۳۰ طلوع تا بیداری: سفر روزانه‌ای به درونِ حکمت',
+      description: '<p>آیا تا به حال خواستی روزت رو با یک جمله‌ی عمیق و الهام‌بخش شروع کنی؟ در این سفر ۳۰ روزه، هر صبح با یک حکمت کوتاه اما قدرتمند بیدار می‌شی و هر شب با نگاهی درون‌گرا و آرامش‌بخش، روزت رو مرور می‌کنی.</p>',
+      price: 50000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 23,
+      images: gallery[261],
+      isActive: true,
+    },
+    {
+      legacyId: 262,
+      slug: makeSlug('۲۰-روز-برای-شناخت-و-مدیریت-ADHD', 262),
+      title: '۲۰ روز برای شناخت، مدیریت و شکوفایی با بیش‌فعالی بزرگسالی (ADHD)',
+      description: '<p>آیا آماده‌ای که ذهن متفاوتت را به یک قدرت واقعی تبدیل کنی؟ این دوره به شما ابزارهای کاربردی و علمی می‌دهد که می‌توانید بلافاصله در زندگی روزمره‌تان به کار ببرید.</p>',
+      price: 300000,
+      salePrice: null,
+      stock: 1,
+      type: 'sms',
+      categoryLegacyId: 25,
+      images: gallery[262],
+      isActive: true,
+    },
+    {
+      legacyId: 263,
+      slug: makeSlug('مهارت‌های-زندگی-توسعه-فردی', 263),
+      title: 'مهارت‌های زندگی: توسعه فردی و توانمندی در مواجهه با چالش‌ها',
+      description: '<p>تصور کن، هر روز با تصمیم‌گیری‌های بهتر، مدیریت استرس مؤثرتر و حل مسئله هوشمندانه‌تر به چالش‌های زندگی‌ات پاسخ می‌دی. این دوره نقطه‌عطف زندگی شما خواهد بود!</p>',
+      price: 500000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 26,
+      images: gallery[263],
+      isActive: true,
+    },
+    {
+      legacyId: 265,
+      slug: makeSlug('رازهای-دلبستگی-شناخت-سبک‌های-ارتباطی', 265),
+      title: '«رازهای دلبستگی: شناخت سبک‌های ارتباطی و بازسازی روابط»',
+      description: '<p>تا به حال با خودت فکر کردی چرا بعضی رابطه‌ها انقدر پرتنش‌اند؟ پاسخ همه‌ی این سؤال‌ها در جایی پنهان است که کمتر کسی به آن توجه می‌کند: سبک دلبستگی تو.</p>',
+      price: 450000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 27,
+      images: gallery[265],
+      isActive: true,
+    },
+    {
+      legacyId: 266,
+      slug: makeSlug('التیام-درون-سفر-به-سوی-خود-واقعی', 266),
+      title: 'التیام درون: سفر به سوی خود واقعی',
+      description: '<p>این دوره به شما کمک می‌کند تا زخم‌های کهنه را التیام ببخشید، با کودک درون خود ارتباط برقرار کنید و به خود واقعی‌تان بازگردید.</p>',
+      price: 400000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 28,
+      images: gallery[266],
+      isActive: true,
+    },
+    {
+      legacyId: 267,
+      slug: makeSlug('اضطراب-را-بشناس-و-مدیریت-کن', 267),
+      title: 'اضطراب را بشناس و مدیریت کن',
+      description: '<p>در این دوره یاد می‌گیرید اضطراب را از ریشه بشناسید و با تکنیک‌های علمی و اثبات‌شده آن را مدیریت کنید.</p>',
+      price: 350000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 17,
+      images: gallery[267],
+      isActive: true,
+    },
+    {
+      legacyId: 268,
+      slug: makeSlug('غلبه-بر-اضطراب-اجتماعی', 268),
+      title: 'غلبه بر اضطراب اجتماعی',
+      description: '<p>اگر در جمع‌ها احساس ناراحتی می‌کنید، از قضاوت دیگران می‌ترسید یا در موقعیت‌های اجتماعی دچار استرس شدید می‌شوید، این دوره برای شماست.</p>',
+      price: 380000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 17,
+      images: gallery[268],
+      isActive: true,
+    },
+    {
+      legacyId: 269,
+      slug: makeSlug('تقویت-عزت-نفس-و-خودباوری', 269),
+      title: 'تقویت عزت نفس و خودباوری',
+      description: '<p>عزت نفس پایه و اساس سلامت روان است. در این دوره یاد می‌گیرید چطور خودانتقادی را کاهش دهید، به خودتان احترام بگذارید و با اعتماد بیشتری زندگی کنید.</p>',
+      price: 320000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 29,
+      images: gallery[269],
+      isActive: true,
+    },
+    {
+      legacyId: 270,
+      slug: makeSlug('رهایی-از-افسردگی-و-بازگشت-به-زندگی', 270),
+      title: 'رهایی از افسردگی و بازگشت به زندگی',
+      description: '<p>افسردگی درمان‌پذیر است. در این دوره با رویکردهای شناختی-رفتاری (CBT) یاد می‌گیرید افکار منفی را شناسایی و تغییر دهید و قدم به قدم به سوی زندگی شادتر حرکت کنید.</p>',
+      price: 400000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 30,
+      images: gallery[270],
+      isActive: true,
+    },
+    {
+      legacyId: 271,
+      slug: makeSlug('خیانت-در-روابط-از-نشانه‌ها-تا-پیامدها', 271),
+      title: 'خیانت در روابط: از نشانه‌ها تا پیامدها',
+      description: '<p>در این دوره ۳۰ روزه، به شما می‌آموزیم چگونه نشانه‌های خیانت را شناسایی کنید، با پیامدهای عاطفی آن روبه‌رو شوید و از این تجربه به عنوان فرصتی برای رشد استفاده کنید.</p>',
+      price: 1400000,
+      salePrice: null,
+      stock: 1,
+      type: 'sms',
+      categoryLegacyId: 16,
+      images: gallery[271],
+      isActive: true,
+    },
+    {
+      legacyId: 272,
+      slug: makeSlug('رازهای-صمیمیت-در-ازدواج', 272),
+      title: 'رازهای صمیمیت در ازدواج: از نزدیکی عاطفی تا ارتباط سالم',
+      description: '<p>دوره «رازهای صمیمیت در ازدواج» به شما کمک می‌کند تا با تمرینات تخصصی و روزانه از دو رویکرد اثبات‌شده روانشناسی (CBT و EFT)، مهارت‌های لازم برای ساخت یک ارتباط سالم و صمیمی‌تر را بیاموزید.</p>',
+      price: 1700000,
+      salePrice: null,
+      stock: 1,
+      type: 'sms',
+      categoryLegacyId: 32,
+      images: gallery[272],
+      isActive: true,
+    },
+    {
+      legacyId: 273,
+      slug: makeSlug('صمیمیت-جنسی-در-زندگی-مشترک', 273),
+      title: 'صمیمیت جنسی در زندگی مشترک',
+      description: '<p>این دوره به زوجین کمک می‌کند تا ارتباط جنسی و عاطفی خود را بهبود ببخشند و صمیمیت عمیق‌تری در زندگی مشترک تجربه کنند.</p>',
+      price: 1500000,
+      salePrice: null,
+      stock: 1,
+      type: 'sms',
+      categoryLegacyId: 33,
+      images: gallery[273],
+      isActive: true,
+    },
+    {
+      legacyId: 274,
+      slug: makeSlug('مشاوره-زوجین-برای-رابطه-بهتر', 274),
+      title: 'مشاوره زوجین برای رابطه بهتر',
+      description: '<p>این دوره به زوجین کمک می‌کند تا مهارت‌های ارتباطی خود را تقویت کنند، تعارض‌ها را سازنده حل کنند و رابطه‌ای عمیق‌تر و پایدارتر بسازند.</p>',
+      price: 1200000,
+      salePrice: null,
+      stock: 1,
+      type: 'sms',
+      categoryLegacyId: 16,
+      images: gallery[274],
+      isActive: true,
+    },
+    {
+      legacyId: 275,
+      slug: makeSlug('برنامه-جامع-زوج-درمانی', 275),
+      title: 'برنامه جامع زوج درمانی',
+      description: '<p>یک برنامه کامل برای زوج‌هایی که می‌خواهند رابطه‌شان را بازسازی کنند یا به سطح بالاتری از صمیمیت برسند.</p>',
+      price: 2000000,
+      salePrice: null,
+      stock: 1,
+      type: 'composite',
+      categoryLegacyId: 16,
+      images: gallery[275],
+      isActive: true,
+    },
+    {
+      legacyId: 276,
+      slug: makeSlug('بازسازی-رابطه-پس-از-بحران', 276),
+      title: 'بازسازی رابطه پس از بحران',
+      description: '<p>بحران‌ها می‌توانند یا رابطه را نابود کنند یا آن را به سطح عمیق‌تری برسانند. این دوره به شما کمک می‌کند مسیر دوم را انتخاب کنید.</p>',
+      price: 1800000,
+      salePrice: null,
+      stock: 1,
+      type: 'sms',
+      categoryLegacyId: 16,
+      images: gallery[276],
+      isActive: true,
+    },
+    {
+      legacyId: 277,
+      slug: makeSlug('غلبه-بر-ترس-و-فوبیا', 277),
+      title: 'غلبه بر ترس و فوبیا',
+      description: '<p>ترس‌ها و فوبیاها زندگی را محدود می‌کنند. در این دوره با روش‌های علمی و مرحله‌به‌مرحله یاد می‌گیرید ترس‌هایتان را مواجه و مدیریت کنید.</p>',
+      price: 350000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 21,
+      images: gallery[277],
+      isActive: true,
+    },
+    {
+      legacyId: 278,
+      slug: makeSlug('مدیریت-خشم-و-هیجانات', 278),
+      title: 'مدیریت خشم و هیجانات',
+      description: '<p>خشم کنترل‌نشده به روابط و سلامت روان آسیب می‌زند. در این دوره یاد می‌گیرید خشم را به جای سرکوب، به شکل سازنده‌ای مدیریت کنید.</p>',
+      price: 300000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 18,
+      images: gallery[278],
+      isActive: true,
+    },
+    {
+      legacyId: 279,
+      slug: makeSlug('مدیریت-استرس-در-زندگی-مدرن', 279),
+      title: 'مدیریت استرس در زندگی مدرن',
+      description: '<p>استرس بخشی از زندگی است اما نباید تسلیم آن شوید. این دوره ابزارهای عملی برای مدیریت استرس روزمره را به شما می‌آموزد.</p>',
+      price: 280000,
+      salePrice: null,
+      stock: 1000,
+      type: 'sms',
+      categoryLegacyId: 19,
+      images: gallery[279],
+      isActive: true,
+    },
+    {
+      legacyId: 280,
+      slug: makeSlug('مشاوره-فردی-آنلاین', 280),
+      title: 'مشاوره فردی آنلاین',
+      description: '<p>جلسات مشاوره فردی با روانشناسان متخصص یاریجو. متناسب با نیاز شما، برنامه‌ریزی می‌شود.</p>',
+      price: 500000,
+      salePrice: null,
+      stock: 100,
+      type: 'online_course',
+      categoryLegacyId: 20,
+      images: gallery[280],
+      isActive: true,
+    },
+    {
+      legacyId: 281,
+      slug: makeSlug('پکیج-ویژه-مشاوره', 281),
+      title: 'پکیج ویژه مشاوره',
+      description: '<p>پکیج جامع مشاوره شامل چندین جلسه با روانشناس متخصص، ارزیابی اولیه و برنامه درمانی شخصی‌سازی‌شده.</p>',
+      price: 1500000,
       salePrice: null,
       stock: 50,
-      type: 'physical',
+      type: 'composite',
+      categoryLegacyId: 20,
+      images: gallery[281],
+      isActive: true,
     },
     {
-      slug: 'anxiety-workbook',
-      title: 'کارنامه کار با اضطراب',
-      description: 'تمرین‌های عملی CBT برای مقابله با اضطراب. ۸۰ تمرین ساختارمند بر اساس پروتکل‌های بالینی.',
-      price: 150000,
-      salePrice: 120000,
-      stock: 999,
-      type: 'digital',
-    },
-    {
-      slug: 'couple-communication-cards',
-      title: 'کارت‌های گفتگوی زوجین',
-      description: '۵۰ کارت با سوال‌های عمیق و تمرین‌های گفتگو برای تقویت ارتباط زوجین.',
-      price: 75000,
+      legacyId: 282,
+      slug: makeSlug('مشاوره-تخصصی-روابط', 282),
+      title: 'مشاوره تخصصی روابط',
+      description: '<p>اگر در روابط عاطفی، خانوادگی یا اجتماعی دچار مشکل هستید، مشاوره تخصصی روابط می‌تواند راه‌حل‌های عملی ارائه دهد.</p>',
+      price: 600000,
       salePrice: null,
-      stock: 80,
-      type: 'physical',
+      stock: 100,
+      type: 'online_course',
+      categoryLegacyId: 20,
+      images: gallery[282],
+      isActive: true,
     },
     {
-      slug: 'depression-recovery-guide',
-      title: 'راهنمای بهبودی از افسردگی',
-      description: 'راهنمای جامع شامل ارزیابی، تکنیک‌های خودیاری، زمان مراجعه به متخصص، و منابع مفید.',
-      price: 0,
+      legacyId: 283,
+      slug: makeSlug('پکیج-کامل-سلامت-روان', 283),
+      title: 'پکیج کامل سلامت روان',
+      description: '<p>یک بسته‌ی جامع برای کسانی که می‌خواهند سلامت روان خود را به طور کامل بهبود ببخشند. شامل دوره‌ها، مشاوره و ابزارهای خودیاری.</p>',
+      price: 3000000,
       salePrice: null,
-      stock: 999,
-      type: 'digital',
+      stock: 50,
+      type: 'composite',
+      categoryLegacyId: 20,
+      images: gallery[283],
+      isActive: true,
+    },
+    {
+      legacyId: 284,
+      slug: makeSlug('پکیج-مشاوره-و-دوره-آنلاین', 284),
+      title: 'پکیج مشاوره و دوره آنلاین',
+      description: '<p>ترکیب مشاوره شخصی و دوره‌های آنلاین برای بهترین نتیجه در بهبود سلامت روان.</p>',
+      price: 2500000,
+      salePrice: null,
+      stock: 50,
+      type: 'composite',
+      categoryLegacyId: 20,
+      images: gallery[284],
+      isActive: true,
     },
   ]
 
-  for (const productData of products) {
-    const existing = await prisma.product.findUnique({ where: { slug: productData.slug } })
+  for (const p of products) {
+    const existing = await prisma.product.findUnique({ where: { slug: p.slug } })
     if (existing) {
-      console.log(`   ↩ Skipping existing product: ${productData.slug}`)
+      console.log(`   ↩ Skipping existing product: ${p.title}`)
       continue
     }
 
-    await prisma.product.create({ data: { ...productData, isActive: true } })
-    console.log(`   ✓ Created product: ${productData.slug}`)
+    const categoryId = p.categoryLegacyId ? shopCategoryMap[p.categoryLegacyId] ?? null : null
+
+    await prisma.product.create({
+      data: {
+        slug: p.slug,
+        title: p.title,
+        description: p.description,
+        price: p.price,
+        salePrice: p.salePrice,
+        stock: p.stock,
+        images: p.images,
+        categoryId,
+        type: p.type,
+        isActive: p.isActive,
+      },
+    })
+    console.log(`   ✓ Product [${p.legacyId}]: ${p.title}`)
   }
 }
 
@@ -1025,7 +1443,8 @@ async function main() {
   await seedBlogPosts(admin, categories)
   await seedStories(admin)
   await seedPsychologists()
-  await seedProducts()
+  const shopCategoryMap = await seedShopCategories()
+  await seedProducts(shopCategoryMap)
   await seedSettings()
   await seedDiscountCodes()
 

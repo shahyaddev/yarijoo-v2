@@ -2,11 +2,22 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Accordion from '@/components/ui/Accordion'
-import { Badge } from '@/components/ui'
+import {
+    IconArrowLeft,
+    IconPlay,
+    IconUsers,
+    IconClock,
+    IconBook,
+    IconStar,
+    IconCheck,
+    IconInfo,
+    IconMoney,
+    IconCalendar,
+} from '@/components/ui/Icon'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 
-// ─── Types ─────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Lesson {
     id: string
@@ -35,7 +46,7 @@ interface Course {
     _count?: { enrollments: number }
 }
 
-// ─── Data fetch ─────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function getCourse(slug: string): Promise<Course | null> {
     try {
@@ -44,31 +55,11 @@ async function getCourse(slug: string): Promise<Course | null> {
         if (!res.ok) return null
         const json = await res.json() as { data?: Course }
         return json.data ?? null
-    } catch {
-        return null
-    }
+    } catch { return null }
 }
-
-// ─── Metadata ────────────────────────────────────────────────────────────────
-
-export async function generateMetadata({
-    params,
-}: {
-    params: Promise<{ slug: string }>
-}): Promise<Metadata> {
-    const { slug } = await params
-    const course = await getCourse(slug)
-    if (!course) return { title: 'دوره یافت نشد | یاری‌جو' }
-    return {
-        title: `${course.title} | یاری‌جو`,
-        description: course.description ?? `دوره آموزشی ${course.title} در یاری‌جو`,
-    }
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDuration(seconds: number | null): string {
-    if (!seconds) return ''
+    if (!seconds) return '—'
     const h = Math.floor(seconds / 3600)
     const m = Math.floor((seconds % 3600) / 60)
     if (h > 0 && m > 0) return `${h} ساعت و ${m} دقیقه`
@@ -83,63 +74,84 @@ function formatLessonDuration(seconds: number | null): string {
     return `${m}:${String(s).padStart(2, '0')}`
 }
 
-// Group lessons into sections of ~4 each (or use a single section if few)
 function groupLessons(lessons: Lesson[]) {
-    if (lessons.length <= 6) {
-        return [{ id: 'all', title: 'سرفصل‌های دوره', lessons }]
-    }
+    if (lessons.length <= 6) return [{ id: 'all', title: 'سرفصل‌های دوره', lessons }]
     const groups: { id: string; title: string; lessons: Lesson[] }[] = []
     const chunkSize = 5
     for (let i = 0; i < lessons.length; i += chunkSize) {
-        const chunk = lessons.slice(i, i + chunkSize)
         groups.push({
             id: `section-${i}`,
-            title: `فصل ${Math.floor(i / chunkSize) + 1}: درس‌های ${i + 1} تا ${Math.min(i + chunkSize, lessons.length)}`,
-            lessons: chunk,
+            title: `فصل ${Math.floor(i / chunkSize) + 1} — درس‌های ${i + 1} تا ${Math.min(i + chunkSize, lessons.length)}`,
+            lessons: lessons.slice(i, i + chunkSize),
         })
     }
     return groups
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Metadata ────────────────────────────────────────────────────────────────
 
-export default async function CourseDetailPage({
-    params,
-}: {
-    params: Promise<{ slug: string }>
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params
     const course = await getCourse(slug)
+    if (!course) return { title: 'دوره یافت نشد | یاری‌جو' }
+    return {
+        title: `${course.title} | یاری‌جو`,
+        description: course.description ?? `دوره آموزشی ${course.title} در یاری‌جو`,
+    }
+}
 
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params
+    const course = await getCourse(slug)
     if (!course) notFound()
 
     const price = course.salePrice != null && course.salePrice < course.price
-        ? course.salePrice
-        : course.price
-
+        ? course.salePrice : course.price
+    const discount = course.salePrice != null && course.salePrice < course.price
+        ? Math.round(((course.price - course.salePrice) / course.price) * 100) : 0
     const enrollments = course._count?.enrollments ?? course.enrolledCount ?? 0
+    const hasFreePreview = (course.lessons ?? []).some(l => l.isFree)
     const lessonGroups = groupLessons(course.lessons ?? [])
 
-    const curriculumItems = lessonGroups.map((group) => ({
+    const stats = [
+        { Icon: IconUsers,    label: 'دانشجو',        value: enrollments.toLocaleString('fa-IR') },
+        { Icon: IconClock,    label: 'مدت دوره',       value: formatDuration(course.duration) },
+        { Icon: IconBook,     label: 'تعداد درس',      value: course.totalLessons.toLocaleString('fa-IR') },
+        { Icon: IconStar,     label: 'امتیاز',          value: course.rating ? course.rating.toFixed(1) : '—' },
+    ]
+
+    const sideFeatures = [
+        { text: `${course.totalLessons} درس ویدیویی` },
+        ...(course.duration ? [{ text: `${formatDuration(course.duration)} آموزش` }] : []),
+        { text: 'گواهینامه پایان دوره' },
+        { text: 'دسترسی مادام‌العمر' },
+        ...(hasFreePreview ? [{ text: 'پیش‌نمایش رایگان' }] : []),
+    ]
+
+    const curriculumItems = lessonGroups.map(group => ({
         id: group.id,
         title: `${group.title} (${group.lessons.length} درس)`,
         content: (
             <ul className="space-y-2 text-sm">
-                {group.lessons.map((lesson) => (
-                    <li key={lesson.id} className="flex items-center gap-2">
-                        <span className={lesson.isFree ? 'text-green-500' : 'text-primary-500'}>
-                            {lesson.isFree ? '▶' : '🔒'}
+                {group.lessons.map(lesson => (
+                    <li key={lesson.id} className="flex items-center gap-2.5 py-1">
+                        <span className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                            style={{ background: lesson.isFree ? '#D1FAE5' : '#F3EDE3' }}>
+                            {lesson.isFree
+                                ? <IconPlay size={10} color="#065F46" />
+                                : <IconInfo size={10} color="#9CA3AF" />}
                         </span>
-                        <span className="flex-1">{lesson.title}</span>
+                        <span className="flex-1" style={{ color: '#374151' }}>{lesson.title}</span>
                         {lesson.duration && (
-                            <span className="text-gray-400 text-xs flex-shrink-0">
+                            <span className="text-xs shrink-0" style={{ color: '#9CA3AF' }}>
                                 {formatLessonDuration(lesson.duration)}
                             </span>
                         )}
                         {lesson.isFree && (
-                            <span className="text-xs text-green-600 dark:text-green-400 flex-shrink-0 font-medium">
-                                رایگان
-                            </span>
+                            <span className="text-xs font-semibold shrink-0 px-2 py-0.5 rounded-full"
+                                style={{ background: '#D1FAE5', color: '#065F46' }}>رایگان</span>
                         )}
                     </li>
                 ))}
@@ -148,181 +160,182 @@ export default async function CourseDetailPage({
     }))
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-10">
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* ── Main content ── */}
-                <div className="flex-1 min-w-0">
-                    {/* Hero thumbnail / gradient */}
-                    <div className="relative rounded-2xl overflow-hidden mb-8 h-72 flex items-center justify-center"
-                        style={{
-                            background: course.thumbnail
-                                ? undefined
-                                : 'linear-gradient(135deg, #1B4332, #2D6A4F)',
-                        }}
-                    >
-                        {course.thumbnail ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                                src={course.thumbnail}
-                                alt={course.title}
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <div className="text-center text-white z-10 px-6">
-                                <div className="text-7xl mb-4">🎓</div>
-                                <p className="text-primary-100 text-sm">دوره آموزشی یاری‌جو</p>
-                            </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-
-                        {/* Free preview badge */}
-                        {(course.lessons ?? []).some((l) => l.isFree) && (
-                            <div className="absolute top-4 left-4 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                پیش‌نمایش رایگان
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Title + badges */}
-                    <div className="mb-6">
-                        <div className="flex gap-2 mb-3 flex-wrap">
-                            {course.category?.name && <Badge variant="info">{course.category.name}</Badge>}
-                            <Badge variant="default">{course.totalLessons} درس</Badge>
-                        </div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                            {course.title}
-                        </h1>
-                        {course.description && (
-                            <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                                {course.description}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-                        {[
-                            {
-                                label: 'دانشجو',
-                                value: enrollments.toLocaleString('fa-IR'),
-                                icon: '👥',
-                            },
-                            {
-                                label: 'ساعت آموزش',
-                                value: formatDuration(course.duration) || '—',
-                                icon: '⏱',
-                            },
-                            {
-                                label: 'درس',
-                                value: course.totalLessons.toLocaleString('fa-IR'),
-                                icon: '📚',
-                            },
-                            {
-                                label: 'امتیاز',
-                                value: course.rating ? course.rating.toFixed(1) : '—',
-                                icon: '⭐',
-                            },
-                        ].map((stat) => (
-                            <div
-                                key={stat.label}
-                                className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4 text-center"
-                            >
-                                <div className="text-2xl mb-1">{stat.icon}</div>
-                                <div className="text-xl font-bold text-gray-900 dark:text-white">
-                                    {stat.value}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {stat.label}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Curriculum */}
-                    {curriculumItems.length > 0 && (
-                        <div>
-                            <h2 className="font-bold text-gray-900 dark:text-white mb-4 text-xl">
-                                سرفصل‌های دوره
-                            </h2>
-                            <Accordion items={curriculumItems} allowMultiple />
-                        </div>
-                    )}
+        <div style={{ background: '#FAF7F2', minHeight: '100vh' }}>
+            {/* Top bar */}
+            <div style={{ background: '#1B4332' }}>
+                <div className="max-w-5xl mx-auto px-5 py-4">
+                    <nav className="flex items-center gap-2 text-sm" aria-label="breadcrumb">
+                        <Link href="/courses"
+                            className="flex items-center gap-1.5 font-medium hover:opacity-80 transition-opacity"
+                            style={{ color: 'rgba(255,255,255,0.75)' }}>
+                            <IconArrowLeft size={14} color="rgba(255,255,255,0.75)" />
+                            دوره‌ها
+                        </Link>
+                        <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
+                        <span className="truncate max-w-[200px]" style={{ color: 'rgba(255,255,255,0.55)' }}>{course.title}</span>
+                    </nav>
                 </div>
+            </div>
 
-                {/* ── Sticky sidebar ── */}
-                <aside className="lg:w-80 flex-shrink-0">
-                    <div className="sticky top-24">
-                        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-6 shadow-lg">
-                            {/* Price */}
-                            <div className="mb-1">
-                                {price === 0 ? (
-                                    <span className="text-3xl font-bold text-green-600 dark:text-green-400">
-                                        رایگان
-                                    </span>
-                                ) : (
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                                            {price.toLocaleString('fa-IR')}
-                                        </span>
-                                        <span className="text-base font-normal text-gray-500">تومان</span>
-                                        {course.salePrice != null && course.salePrice < course.price && (
-                                            <span className="text-sm text-gray-400 line-through">
-                                                {course.price.toLocaleString('fa-IR')}
-                                            </span>
-                                        )}
+            <div className="max-w-5xl mx-auto px-5 py-10">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-start">
+
+                    {/* ── Main content ── */}
+                    <div className="space-y-6 order-2 lg:order-1">
+
+                        {/* Thumbnail with badges */}
+                        <div className="relative rounded-2xl overflow-hidden"
+                            style={{ aspectRatio: '16/7', background: 'linear-gradient(135deg,#1B4332,#2D6A4F)', boxShadow: '0 4px 24px rgba(27,67,50,0.15)' }}>
+                            {course.thumbnail
+                                ? <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                                : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                                        <IconPlay size={48} color="rgba(255,255,255,0.3)" />
+                                        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>دوره آموزشی یاری‌جو</p>
                                     </div>
                                 )}
+                            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 60%)' }} />
+                            {course.category?.name && (
+                                <span className="absolute top-3 right-3 text-xs font-bold px-3 py-1.5 rounded-full z-10"
+                                    style={{ background: 'rgba(255,255,255,0.92)', color: '#1B4332', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+                                    {course.category.name}
+                                </span>
+                            )}
+                            {hasFreePreview && (
+                                <span className="absolute top-3 left-3 text-xs font-bold px-3 py-1.5 rounded-full z-10"
+                                    style={{ background: '#065F46', color: 'white' }}>
+                                    پیش‌نمایش رایگان
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Title */}
+                        <h1 className="text-2xl md:text-[28px] font-black leading-snug" style={{ color: '#1C1C1E' }}>
+                            {course.title}
+                        </h1>
+
+                        {/* Stats grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {stats.map(({ Icon, label, value }) => (
+                                <div key={label}
+                                    className="flex items-center gap-2.5 p-3 rounded-xl"
+                                    style={{ background: 'white', border: '1px solid #EDE6D6' }}>
+                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#F3EDE3' }}>
+                                        <Icon size={13} color="#1B4332" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] leading-none mb-0.5" style={{ color: '#9CA3AF' }}>{label}</p>
+                                        <p className="text-xs font-bold truncate" style={{ color: '#1C1C1E' }}>{value}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="h-px" style={{ background: '#EDE6D6' }} />
+
+                        {/* Description */}
+                        {course.description && (
+                            <div>
+                                <h2 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: '#1C1C1E' }}>
+                                    <span className="w-1 h-4 rounded-full inline-block shrink-0" style={{ background: '#1B4332' }} />
+                                    درباره این دوره
+                                </h2>
+                                <p className="text-sm leading-8" style={{ color: '#4B5563' }}>{course.description}</p>
                             </div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                                دسترسی مادام‌العمر · گواهینامه پایان دوره
-                            </p>
+                        )}
+
+                        {/* Curriculum */}
+                        {curriculumItems.length > 0 && (
+                            <div>
+                                <h2 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: '#1C1C1E' }}>
+                                    <span className="w-1 h-4 rounded-full inline-block shrink-0" style={{ background: '#1B4332' }} />
+                                    سرفصل‌های دوره
+                                </h2>
+                                <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #EDE6D6' }}>
+                                    <Accordion items={curriculumItems} allowMultiple />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Sidebar ── */}
+                    <aside className="space-y-4 order-1 lg:order-2 lg:sticky lg:top-6">
+                        <div className="rounded-2xl overflow-hidden"
+                            style={{ background: 'white', border: '1px solid #E8E0D4', boxShadow: '0 2px 20px rgba(27,67,50,0.08)' }}>
+
+                            {/* Price */}
+                            <div className="px-5 py-4" style={{ borderBottom: '1px solid #F3EDE3' }}>
+                                {discount > 0 ? (
+                                    <div className="space-y-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm line-through" style={{ color: '#9CA3AF' }}>
+                                                {course.price.toLocaleString('fa-IR')} تومان
+                                            </span>
+                                            <span className="text-xs font-black px-2 py-0.5 rounded-lg text-white" style={{ background: '#DC2626' }}>
+                                                {discount}٪ تخفیف
+                                            </span>
+                                        </div>
+                                        <div className="text-[22px] font-black" style={{ color: '#1B4332' }}>
+                                            {price === 0 ? 'رایگان' : `${price.toLocaleString('fa-IR')} تومان`}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-[22px] font-black" style={{ color: '#1B4332' }}>
+                                        {price === 0 ? 'رایگان' : `${price.toLocaleString('fa-IR')} تومان`}
+                                    </div>
+                                )}
+                                <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
+                                    دسترسی مادام‌العمر · گواهینامه پایان دوره
+                                </p>
+                            </div>
 
                             {/* CTAs */}
-                            <Link
-                                href={`/courses/${course.slug}/learn`}
-                                className="block w-full text-center bg-primary-700 hover:bg-primary-800 text-white font-semibold py-3 rounded-xl transition-colors mb-3"
-                            >
-                                {price === 0 ? '▶ شروع یادگیری' : 'ثبت‌نام در دوره'}
-                            </Link>
-                            {price > 0 && (
-                                <Link
-                                    href={`/checkout?course=${course.slug}`}
-                                    className="block w-full text-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium py-3 rounded-xl transition-colors"
-                                >
-                                    خرید دوره
+                            <div className="p-4 space-y-2.5">
+                                <Link href={`/courses/${course.slug}/learn`}
+                                    className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl font-bold text-sm text-white transition-opacity hover:opacity-90"
+                                    style={{ background: '#1B4332' }}>
+                                    <IconPlay size={15} color="white" />
+                                    {price === 0 ? 'شروع یادگیری' : 'ثبت‌نام در دوره'}
                                 </Link>
-                            )}
+                                {price > 0 && (
+                                    <Link href={`/checkout?course=${course.slug}`}
+                                        className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl font-bold text-sm border-2 transition-colors hover:opacity-80"
+                                        style={{ borderColor: '#1B4332', color: '#1B4332', background: 'transparent' }}>
+                                        <IconMoney size={15} color="#1B4332" />
+                                        خرید دوره
+                                    </Link>
+                                )}
+                            </div>
 
                             {/* Feature list */}
-                            <ul className="mt-6 space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                                <li className="flex items-center gap-2">
-                                    <span className="text-green-500">✓</span>
-                                    {course.totalLessons} درس ویدیویی
-                                </li>
-                                {course.duration && (
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-green-500">✓</span>
-                                        {formatDuration(course.duration)} آموزش
-                                    </li>
-                                )}
-                                <li className="flex items-center gap-2">
-                                    <span className="text-green-500">✓</span>
-                                    گواهینامه پایان دوره
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-green-500">✓</span>
-                                    دسترسی مادام‌العمر
-                                </li>
-                                {(course.lessons ?? []).some((l) => l.isFree) && (
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-green-500">✓</span>
-                                        پیش‌نمایش رایگان
-                                    </li>
-                                )}
-                            </ul>
+                            <div className="px-5 pb-4 space-y-2" style={{ borderTop: '1px solid #F3EDE3', paddingTop: 12 }}>
+                                {sideFeatures.map(({ text }) => (
+                                    <div key={text} className="flex items-center gap-2 text-xs" style={{ color: '#6B7280' }}>
+                                        <span className="w-4 h-4 rounded-md flex items-center justify-center shrink-0" style={{ background: '#D1FAE5' }}>
+                                            <IconCheck size={10} color="#065F46" strokeWidth={3} />
+                                        </span>
+                                        {text}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </aside>
+
+                        {/* Calendar hint */}
+                        <div className="rounded-2xl p-4 flex items-start gap-3"
+                            style={{ background: '#F0FDF4', border: '1px solid #A7F3D0' }}>
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#D1FAE5' }}>
+                                <IconCalendar size={15} color="#065F46" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm" style={{ color: '#065F46' }}>دسترسی فوری</p>
+                                <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#047857' }}>
+                                    بلافاصله پس از ثبت‌نام به تمام درس‌ها دسترسی خواهید داشت.
+                                </p>
+                            </div>
+                        </div>
+                    </aside>
+
+                </div>
             </div>
         </div>
     )

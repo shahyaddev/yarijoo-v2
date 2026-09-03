@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import BookReaderClient from './BookReaderClient'
+import { imgUrl } from '@/lib/imgUrl'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3333/api/v1'
 
@@ -38,11 +39,6 @@ async function getBookPages(slug: string): Promise<BookData | null> {
     }
 }
 
-function imgUrl(path: string | null | undefined): string | null {
-    if (!path) return null
-    if (path.startsWith('http')) return path
-    return path.startsWith('/') ? path : `/${path}`
-}
 
 export default async function BookReaderPage({ params }: PageProps) {
     const { slug } = await params

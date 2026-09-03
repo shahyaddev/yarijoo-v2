@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { imgUrl } from '@/lib/imgUrl'
 
 export const revalidate = 300
 
@@ -35,12 +36,6 @@ interface PageProps {
     searchParams: Promise<{ sort?: string; type?: string }>
 }
 
-function imgUrl(path: string | null | undefined): string | null {
-    if (!path) return null
-    if (path.startsWith('http')) return path
-    const filename = path.split('/').pop()
-    return `/uploads/shop/${filename}`
-}
 
 function formatPrice(price: number): string {
     if (price === 0) return 'رایگان'

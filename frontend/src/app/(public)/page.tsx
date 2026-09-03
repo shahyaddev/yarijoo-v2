@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import HeroSliderSection from '@/components/features/home/HeroSliderSection'
+import { imgUrl } from '@/lib/imgUrl'
 
 export const revalidate = 60
 
@@ -14,11 +15,6 @@ interface Story     { id: string; title: string | null; content: string; mediaUr
 interface Test      { id: string; slug: string; title: string; category: string; duration: number | null; isPremium: boolean }
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
-function imgUrl(p: string | null | undefined): string | null {
-    if (!p) return null
-    if (p.startsWith('http')) return p
-    return `/${p}`
-}
 function strip(h: string) {
     return h.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').trim().slice(0, 120)
 }
@@ -234,20 +230,25 @@ export default async function HomePage() {
                     />
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                         {[
-                            { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="1.8" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, title: 'شخصیت', cat: 'شخصیت', bg: '#E8F5E9' },
-                            { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>, title: 'اضطراب', cat: 'اضطراب', bg: '#FFFDE7' },
-                            { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1565C0" strokeWidth="1.8" strokeLinecap="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>, title: 'افسردگی', cat: 'افسردگی', bg: '#E3F2FD' },
-                            { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C62828" strokeWidth="1.8" strokeLinecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>, title: 'استرس', cat: 'استرس', bg: '#FCE4EC' },
-                            { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6A1B9A" strokeWidth="1.8" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, title: 'روابط', cat: 'روابط', bg: '#F3E5F5' },
-                            { icon: <IconBrain size={22} color="#00695C" />, title: 'شناختی', cat: 'شناختی', bg: '#E0F7FA' },
+                            { img: '/uploads/shop/69e361c6acff5.png',  title: 'استرس',    cat: 'استرس',    bg: '#FCE4EC', color: '#C62828' },
+                            { img: '/uploads/shop/69e352330a67d.png',  title: 'اضطراب',   cat: 'اضطراب',   bg: '#FFFDE7', color: '#C9A84C' },
+                            { img: '/uploads/shop/69e361e1b783f.png',  title: 'ترس',      cat: 'ترس',      bg: '#FFF3E0', color: '#E65100' },
+                            { img: '/uploads/shop/69e361eef3621.png',  title: 'موفقیت',   cat: 'موفقیت',   bg: '#E8F5E9', color: '#1B4332' },
+                            { img: '/uploads/shop/69e361d2ed414.png',  title: 'مشاوره',   cat: 'مشاوره',   bg: '#E3F2FD', color: '#1565C0' },
+                            { img: '/uploads/shop/69e35052446de.png',  title: 'زوج درمانی', cat: 'زوج',   bg: '#F3E5F5', color: '#6A1B9A' },
                         ].map(c => (
                             <Link key={c.cat} href={`/tests?category=${encodeURIComponent(c.cat)}`}
-                                className="group flex flex-col items-center gap-2.5 py-5 rounded-2xl border transition-all hover:-translate-y-1 hover:shadow-md"
+                                className="group flex flex-col items-center gap-0 rounded-2xl border overflow-hidden transition-all hover:-translate-y-1 hover:shadow-md"
                                 style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: c.bg }}>
-                                    {c.icon}
+                                <div className="w-full h-24 overflow-hidden flex-shrink-0" style={{ background: c.bg }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={c.img} alt={c.title}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        loading="lazy" />
                                 </div>
-                                <span className="text-xs font-semibold group-hover:text-[#1B4332] transition-colors" style={{ color: '#3C3C3E' }}>{c.title}</span>
+                                <div className="py-2.5 px-1 w-full text-center">
+                                    <span className="text-xs font-bold group-hover:text-[#1B4332] transition-colors" style={{ color: '#3C3C3E' }}>{c.title}</span>
+                                </div>
                             </Link>
                         ))}
                     </div>
@@ -390,70 +391,6 @@ export default async function HomePage() {
                 </section>
             )}
 
-            {/* ━━━━ BLOG ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-            {blogs.length > 0 && (
-                <section className="py-16 px-5" style={{ background: '#F3EDE3' }}>
-                    <div className="max-w-7xl mx-auto">
-                        <SectionHeader
-                            icon={<IconPen size={20} color="white" />}
-                            title="مجله روانشناسی"
-                            subtitle="آخرین مقالات تخصصی"
-                            href="/blog"
-                            linkLabel="همه مقالات"
-                        />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {blogs.slice(0, 6).map(p => {
-                                const src = imgUrl(p.coverImage)
-                                return (
-                                    <Link key={p.id} href={`/blog/${p.slug}`}
-                                        className="group flex flex-col rounded-2xl overflow-hidden border transition-all hover:-translate-y-1 hover:shadow-lg"
-                                        style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                                        {/* Cover */}
-                                        <div className="aspect-[16/9] overflow-hidden relative flex-shrink-0" style={{ background: 'linear-gradient(135deg,#EDE6D6,#DDD5C5)' }}>
-                                            {src ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={src} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(27,67,50,0.12)' }}>
-                                                        <IconPen size={22} color="#1B4332" />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-4 flex flex-col flex-1">
-                                            <p className="font-bold text-sm line-clamp-2 mb-2 group-hover:text-[#1B4332] transition-colors leading-relaxed flex-1" style={{ color: '#1C1C1E' }}>
-                                                {p.title}
-                                            </p>
-                                            {p.excerpt && (
-                                                <p className="text-xs line-clamp-2 mb-3 leading-relaxed" style={{ color: '#8C8C8E' }}>
-                                                    {p.excerpt}
-                                                </p>
-                                            )}
-                                            <div className="flex items-center justify-between text-xs pt-2 border-t" style={{ color: '#8C8C8E', borderColor: '#F3EDE3' }}>
-                                                <div className="flex items-center gap-2">
-                                                    {p.readTime && (
-                                                        <span className="flex items-center gap-1">
-                                                            <IconClock size={11} />
-                                                            {p.readTime} دقیقه
-                                                        </span>
-                                                    )}
-                                                    {p.publishedAt && <span>{fmtDate(p.publishedAt)}</span>}
-                                                </div>
-                                                <span className="font-semibold flex items-center gap-1" style={{ color: '#1B4332' }}>
-                                                    ادامه
-                                                    <IconArrowLeft size={12} color="#1B4332" />
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    </div>
-                </section>
-            )}
-
             {/* ━━━━ BOOKS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
             {books.length > 0 && (
                 <section className="py-16 px-5" style={{ background: '#FAF7F2' }}>
@@ -519,32 +456,45 @@ export default async function HomePage() {
                             href="/stories"
                             linkLabel="همه داستان‌ها"
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {stories.slice(0, 6).map(s => {
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                            {stories.slice(0, 4).map(s => {
+                                const storySrc = imgUrl(s.mediaUrl)
                                 const excerpt = s.content ? strip(s.content) : ''
                                 return (
                                     <Link key={s.id} href={`/stories/${s.id}`}
-                                        className="group flex gap-4 p-4 rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-md"
+                                        className="group flex flex-col rounded-2xl overflow-hidden border transition-all hover:-translate-y-1 hover:shadow-lg"
                                         style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                                        {/* Icon placeholder */}
-                                        <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'linear-gradient(135deg,#E8F5E9,#D4EDD9)' }}>
-                                            <IconStory size={20} color="#1B4332" />
+                                        {/* Cover — same aspect as books */}
+                                        <div className="aspect-[3/4] overflow-hidden relative" style={{ background: 'linear-gradient(145deg,#2D6A4F,#1B4332)' }}>
+                                            {storySrc ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={storySrc} alt={s.title ?? 'داستان'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-4">
+                                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
+                                                        <IconStory size={24} color="white" />
+                                                    </div>
+                                                    {s.title && <p className="text-white text-xs font-bold text-center leading-relaxed line-clamp-3 opacity-80">{s.title}</p>}
+                                                </div>
+                                            )}
+                                            {/* overlay gradient for readability */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
                                         </div>
-                                        <div className="flex-1 min-w-0">
+                                        <div className="p-3">
                                             {s.title && (
-                                                <p className="font-bold text-sm mb-1.5 leading-snug line-clamp-2 group-hover:text-[#1B4332] transition-colors" style={{ color: '#1C1C1E' }}>
+                                                <p className="font-bold text-xs line-clamp-2 mb-1 leading-relaxed group-hover:text-[#1B4332] transition-colors" style={{ color: '#1C1C1E' }}>
                                                     {s.title}
                                                 </p>
                                             )}
                                             {excerpt && (
-                                                <p className="text-xs leading-relaxed line-clamp-3" style={{ color: '#8C8C8E' }}>
+                                                <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: '#8C8C8E' }}>
                                                     {excerpt}
                                                 </p>
                                             )}
-                                            <div className="flex items-center gap-1 mt-2 text-xs font-semibold" style={{ color: '#1B4332' }}>
+                                            <p className="text-xs font-semibold mt-2 flex items-center gap-1" style={{ color: '#1B4332' }}>
                                                 خواندن
                                                 <IconArrowLeft size={11} color="#1B4332" />
-                                            </div>
+                                            </p>
                                         </div>
                                     </Link>
                                 )
@@ -561,47 +511,128 @@ export default async function HomePage() {
                         <SectionHeader
                             icon={<IconShop size={20} color="white" />}
                             title="فروشگاه"
-                            subtitle="بسته‌ها و محصولات تخصصی سلامت روان"
+                            subtitle="بسته‌ها و دوره‌های تخصصی سلامت روان"
                             href="/shop"
                             linkLabel="همه محصولات"
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                             {prods.slice(0, 6).map(p => {
-                                const imgSrc = (() => { const i = p.images?.[0]; if (!i) return null; return i.startsWith('http') ? i : null })()
                                 const price = p.salePrice != null && p.salePrice < p.price ? p.salePrice : p.price
-                                const typeLabel: Record<string, string> = { digital: 'دیجیتال', physical: 'فیزیکی', sms: 'پیامکی', online_course: 'دوره', composite: 'ترکیبی' }
+                                const hasDiscount = p.salePrice != null && p.salePrice < p.price
+                                const discountPct = hasDiscount ? Math.round((1 - p.salePrice! / p.price) * 100) : 0
+                                const typeLabel: Record<string, string> = { digital: 'دیجیتال', physical: 'فیزیکی', sms: 'پیامکی', online_course: 'دوره آنلاین', composite: 'پکیج ترکیبی' }
                                 const typeBg: Record<string, string> = { digital: '#E3F2FD', physical: '#FCE4EC', sms: '#E8F5E9', online_course: '#FFF3E0', composite: '#F3E5F5' }
                                 const typeColor: Record<string, string> = { digital: '#1565C0', physical: '#C62828', sms: '#1B4332', online_course: '#E65100', composite: '#6A1B9A' }
+                                const prodImgSrc = imgUrl(p.images?.[0])
                                 return (
                                     <Link key={p.id} href={`/shop/${p.slug}`}
-                                        className="group flex items-center gap-4 p-4 rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-md"
+                                        className="group flex flex-col rounded-2xl overflow-hidden border transition-all hover:-translate-y-1 hover:shadow-xl"
                                         style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                                        {/* Image / icon */}
-                                        <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center"
-                                            style={{ background: typeBg[p.type] ?? '#F3EDE3' }}>
-                                            {imgSrc ? (
+                                        {/* Product image */}
+                                        <div className="relative h-44 overflow-hidden flex-shrink-0"
+                                            style={{ background: `linear-gradient(135deg, ${typeBg[p.type] ?? '#F3EDE3'}, #EDE6D6)` }}>
+                                            {prodImgSrc ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={imgSrc} alt={p.title} className="w-full h-full object-cover" loading="lazy" />
+                                                <img src={prodImgSrc} alt={p.title}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                    loading="lazy" />
                                             ) : (
-                                                <IconShop size={24} color={typeColor[p.type] ?? '#1B4332'} />
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                                                        style={{ background: 'rgba(27,67,50,0.1)' }}>
+                                                        <IconShop size={30} color="#1B4332" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <span className="absolute top-3 right-3 text-xs font-bold px-2.5 py-1 rounded-full shadow-sm"
+                                                style={{ background: typeBg[p.type] ?? '#F3EDE3', color: typeColor[p.type] ?? '#1B4332' }}>
+                                                {typeLabel[p.type] ?? 'محصول'}
+                                            </span>
+                                            {hasDiscount && (
+                                                <span className="absolute top-3 left-3 text-xs font-black px-2.5 py-1 rounded-full shadow-sm"
+                                                    style={{ background: '#C62828', color: 'white' }}>
+                                                    {discountPct}٪ تخفیف
+                                                </span>
                                             )}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-sm line-clamp-2 mb-2 group-hover:text-[#1B4332] transition-colors leading-snug" style={{ color: '#1C1C1E' }}>
+                                        {/* Content */}
+                                        <div className="p-4 flex flex-col flex-1">
+                                            <p className="font-bold text-sm line-clamp-2 leading-relaxed flex-1 mb-3 group-hover:text-[#1B4332] transition-colors"
+                                                style={{ color: '#1C1C1E' }}>
                                                 {p.title}
                                             </p>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold" style={{ color: '#1B4332' }}>
-                                                    {price === 0 ? 'رایگان' : `${price.toLocaleString('fa-IR')} ت`}
-                                                </span>
-                                                {p.salePrice != null && p.salePrice < p.price && (
-                                                    <span className="text-xs line-through" style={{ color: '#C0B8AE' }}>
-                                                        {p.price.toLocaleString('fa-IR')}
+                                            <div className="flex items-center justify-between pt-3 border-t"
+                                                style={{ borderColor: '#F3EDE3' }}>
+                                                <div className="flex items-baseline gap-2">
+                                                    <span className="font-black text-base" style={{ color: '#1B4332' }}>
+                                                        {price === 0 ? 'رایگان' : `${(price / 10).toLocaleString('fa-IR')} تومان`}
                                                     </span>
-                                                )}
-                                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full mr-auto"
-                                                    style={{ background: typeBg[p.type] ?? '#F3EDE3', color: typeColor[p.type] ?? '#1B4332' }}>
-                                                    {typeLabel[p.type] ?? 'محصول'}
+                                                    {hasDiscount && (
+                                                        <span className="text-xs line-through" style={{ color: '#C0B8AE' }}>
+                                                            {(p.price / 10).toLocaleString('fa-IR')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="text-xs font-semibold flex items-center gap-1" style={{ color: '#1B4332' }}>
+                                                    خرید
+                                                    <IconArrowLeft size={12} color="#1B4332" />
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* ━━━━ BLOG ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+            {blogs.length > 0 && (
+                <section className="py-16 px-5" style={{ background: '#F3EDE3' }}>
+                    <div className="max-w-7xl mx-auto">
+                        <SectionHeader
+                            icon={<IconPen size={20} color="white" />}
+                            title="مجله روانشناسی"
+                            subtitle="آخرین مقالات تخصصی"
+                            href="/blog"
+                            linkLabel="همه مقالات"
+                        />
+                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                            {blogs.slice(0, 8).map(p => {
+                                const src = imgUrl(p.coverImage)
+                                return (
+                                    <Link key={p.id} href={`/blog/${p.slug}`}
+                                        className="group flex flex-col rounded-2xl overflow-hidden border transition-all hover:-translate-y-1 hover:shadow-lg"
+                                        style={{ background: 'white', borderColor: '#EDE6D6' }}>
+                                        <div className="aspect-[16/9] overflow-hidden relative flex-shrink-0" style={{ background: 'linear-gradient(135deg,#EDE6D6,#DDD5C5)' }}>
+                                            {src ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={src} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(27,67,50,0.12)' }}>
+                                                        <IconPen size={18} color="#1B4332" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="p-3 flex flex-col flex-1">
+                                            <p className="font-bold text-xs line-clamp-2 mb-1.5 group-hover:text-[#1B4332] transition-colors leading-relaxed flex-1" style={{ color: '#1C1C1E' }}>
+                                                {p.title}
+                                            </p>
+                                            <div className="flex items-center justify-between text-xs pt-2 border-t" style={{ color: '#8C8C8E', borderColor: '#F3EDE3' }}>
+                                                <div className="flex items-center gap-1.5">
+                                                    {p.readTime && (
+                                                        <span className="flex items-center gap-0.5">
+                                                            <IconClock size={10} />
+                                                            {p.readTime} دقیقه
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="font-semibold flex items-center gap-0.5" style={{ color: '#1B4332' }}>
+                                                    ادامه
+                                                    <IconArrowLeft size={11} color="#1B4332" />
                                                 </span>
                                             </div>
                                         </div>

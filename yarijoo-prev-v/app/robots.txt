@@ -1,0 +1,6 @@
+User-Agent: *
+Allow: /
+Disallow: /private/
+
+Sitemap: https://yarijoo.ir/sitemap.xml
+Sitemap: https://www.yarijoo.ir/sitemap.xml
