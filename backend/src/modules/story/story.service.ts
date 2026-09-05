@@ -47,6 +47,16 @@ export class StoryService {
         };
     }
 
+    async getStoryById(id: string) {
+        const story = await this.prisma.story.findFirst({
+            where: {
+                id,
+                status: ContentStatus.PUBLISHED,
+            },
+        });
+        return story ?? null;
+    }
+
     async recordView(userId: string, storyId: string) {
         await this.prisma.storyView.upsert({
             where: { storyId_userId: { storyId, userId } },

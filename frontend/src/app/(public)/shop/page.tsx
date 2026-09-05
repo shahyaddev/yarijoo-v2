@@ -1,23 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { imgUrl } from '@/lib/imgUrl'
+import ShopSidebar from './ShopSidebar'
+import ShopProductCard from './ShopProductCard'
 
 export const revalidate = 300
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://yarijoo.com'
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3333/api/v1'
 
 export const metadata: Metadata = {
-    title: 'فروشگاه محصولات روانشناسی | یاری‌جو',
-    description: 'خرید محصولات و بسته‌های کمک به سلامت روان — پکیج‌های تخصصی با بهترین قیمت',
-    openGraph: {
-        title: 'فروشگاه | یاری‌جو',
-        description: 'خرید محصولات و بسته‌های کمک به سلامت روان',
-        url: `${siteUrl}/shop`,
-        type: 'website',
-        locale: 'fa_IR',
-    },
-    alternates: { canonical: `${siteUrl}/shop` },
+    title: 'فروشگاه | یاری‌جو',
+    description: 'کتاب‌ها، دوره‌های آموزشی، پکیج‌های مشاوره و محصولات تخصصی روانشناسی',
 }
 
 interface Product {
@@ -33,47 +25,26 @@ interface Product {
 }
 
 interface PageProps {
-    searchParams: Promise<{ sort?: string; type?: string }>
+    searchParams: Promise<{ sort?: string; type?: string; page?: string }>
 }
 
-
-function formatPrice(price: number): string {
-    if (price === 0) return 'رایگان'
-    return `${price.toLocaleString('fa-IR')} تومان`
+function toFarsi(n: number | string) {
+    return String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[+d])
 }
 
-function getDiscount(price: number, salePrice: number): number {
-    return Math.round(((price - salePrice) / price) * 100)
-}
-
-async function getProducts(sort = 'newest', type = '') {
+async function getProducts(sort = 'newest', type = '', page = 1) {
     try {
-        const params = new URLSearchParams({ limit: '50', page: '1' })
-        if (sort) params.set('sort', sort)
-        if (type) params.set('type', type)
-
-        const res = await fetch(`${API}/shop/products?${params}`, {
-            next: { revalidate: 300 },
-        })
-        if (!res.ok) return { products: [], total: 0 }
+        const p = new URLSearchParams({ limit: '24', page: String(page) })
+        if (sort) p.set('sort', sort)
+        if (type) p.set('type', type)
+        const res = await fetch(`${API}/shop/products?${p}`, { next: { revalidate: 300 } })
+        if (!res.ok) return { products: [] as Product[], total: 0 }
         const data = await res.json() as { data: { products: Product[]; total: number } }
         return { products: data.data?.products ?? [], total: data.data?.total ?? 0 }
     } catch {
-        return { products: [], total: 0 }
+        return { products: [] as Product[], total: 0 }
     }
 }
-
-const TYPE_LABELS: Record<string, string> = {
-    physical: 'فیزیکی',
-    sms: 'پیامکی',
-    book: 'کتاب',
-    story: 'داستان',
-    test: 'تست',
-    online_course: 'دوره آنلاین',
-    composite: 'ترکیبی',
-}
-
-const TYPES = ['', 'physical', 'sms', 'book', 'story', 'test', 'online_course']
 
 const SORT_OPTIONS = [
     { value: 'newest', label: 'جدیدترین' },
@@ -81,171 +52,177 @@ const SORT_OPTIONS = [
     { value: 'price_desc', label: 'گران‌ترین' },
 ]
 
+// ─── Icons ────────────────────────────────────────────────────────────────────
+function IconShop() {
+    return (
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+    )
+}
+function IconBox() {
+    return (
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.2 }}>
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+    )
+}
+function IconChevronR() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg> }
+function IconChevronL() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg> }
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ShopPage({ searchParams }: PageProps) {
     const params = await searchParams
     const sortBy = params.sort ?? 'newest'
     const activeType = params.type ?? ''
+    const page = Math.max(1, Number(params.page ?? 1))
 
-    const { products, total } = await getProducts(sortBy, activeType)
+    const { products, total } = await getProducts(sortBy, activeType, page)
+    const totalPages = Math.ceil(total / 24) || 1
+
+    const pagesRange = (() => {
+        const max = 7
+        let s = Math.max(1, page - Math.floor(max / 2))
+        const e = Math.min(totalPages, s + max - 1)
+        if (e - s < max - 1) s = Math.max(1, e - max + 1)
+        return Array.from({ length: e - s + 1 }, (_, i) => s + i)
+    })()
 
     return (
-        <div style={{ background: '#FAF7F2', minHeight: '100vh' }}>
-            {/* Header */}
-            <div style={{ background: '#1B4332' }} className="py-14 px-5">
-                <div className="max-w-7xl mx-auto">
-                    <h1 className="text-3xl md:text-4xl font-black text-white mb-2">فروشگاه یاری‌جو</h1>
-                    <p style={{ color: 'rgba(255,255,255,0.7)' }} className="text-lg">
-                        بسته‌ها و محصولات تخصصی سلامت روان
-                    </p>
+        <div style={{ background: '#FAF7F2', minHeight: '100vh', direction: 'rtl' }}>
+
+            {/* ── Hero ── */}
+            <div className="section-forest" style={{ position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', inset: 0, opacity: 0.05, backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
+                <div style={{ position: 'absolute', top: -60, right: -60, width: 220, height: 220, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.07)' }} />
+                <div style={{ position: 'absolute', bottom: -40, left: -40, width: 180, height: 180, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.06)' }} />
+
+                <div className="max-w-[1280px] mx-auto px-4 py-14" style={{ position: 'relative' }}>
+                    {/* Title */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+                            <IconShop />
+                        </div>
+                        <div>
+                            <h1 style={{ fontSize: 28, fontWeight: 900, color: 'white', margin: 0, lineHeight: 1.3 }}>فروشگاه یاری‌جو</h1>
+                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, margin: '4px 0 0' }}>
+                                محصولات تخصصی سلامت روان
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* آمار hero */}
+                    <div className="flex flex-wrap gap-3" style={{ marginTop: 4 }}>
+                        {[
+                            { label: 'محصول', value: toFarsi(total) },
+                            { label: 'پرفروش‌ترین', value: toFarsi(50) },
+                            { label: 'با تخفیف', value: toFarsi(25) },
+                        ].map(s => (
+                            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                <span style={{ fontSize: 20, fontWeight: 900, color: '#52B788' }}>{s.value}</span>
+                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{s.label}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-5 py-10">
-                {/* Filters */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-                    {/* Type filter */}
-                    <div className="flex flex-wrap gap-2">
-                        {TYPES.map((t) => (
-                            <Link
-                                key={t || 'all'}
-                                href={`/shop?sort=${sortBy}${t ? `&type=${t}` : ''}`}
-                                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                                style={
-                                    activeType === t
-                                        ? { background: '#1B4332', color: 'white' }
-                                        : { background: 'white', color: '#5C5C5E', border: '1.5px solid #EDE6D6' }
-                                }
-                            >
-                                {t ? (TYPE_LABELS[t] ?? t) : 'همه'}
-                            </Link>
-                        ))}
-                    </div>
+            {/* ── Body ── */}
+            <div className="max-w-[1280px] mx-auto px-4 py-8">
+                <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
 
-                    {/* Sort + count */}
-                    <div className="flex items-center gap-3">
-                        <span className="text-sm" style={{ color: '#8C8C8E' }}>
-                            {total.toLocaleString('fa-IR')} محصول
-                        </span>
-                        <div className="flex gap-1">
-                            {SORT_OPTIONS.map((opt) => (
-                                <Link
-                                    key={opt.value}
-                                    href={`/shop?sort=${opt.value}${activeType ? `&type=${activeType}` : ''}`}
-                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                                    style={
-                                        sortBy === opt.value
-                                            ? { background: '#1B4332', color: 'white' }
-                                            : { background: 'white', color: '#8C8C8E', border: '1px solid #EDE6D6' }
-                                    }
-                                >
-                                    {opt.label}
-                                </Link>
-                            ))}
+                    {/* SIDEBAR */}
+                    <ShopSidebar total={total} />
+
+                    {/* MAIN */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+
+                        {/* Section title + sort */}
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
+                            <div style={{ width: 4, height: 28, borderRadius: 99, background: 'linear-gradient(to bottom,#1B4332,rgba(27,67,50,0.3))', flexShrink: 0 }} />
+                            <h2 style={{ fontSize: 18, fontWeight: 900, color: '#1C1C1E', margin: 0 }}>همه محصولات</h2>
+                            <div style={{ flex: 1, height: 1, background: 'linear-gradient(to left, #EDE6D6, transparent)', minWidth: 20 }} />
+                            <span style={{ fontSize: 13, color: '#8C8C8E' }}>{toFarsi(total)} محصول</span>
+
+                            {/* مرتب‌سازی */}
+                            <div style={{ display: 'flex', gap: 6 }}>
+                                {SORT_OPTIONS.map(opt => (
+                                    <Link key={opt.value}
+                                        href={`/shop?sort=${opt.value}${activeType ? `&type=${activeType}` : ''}`}
+                                        style={{
+                                            padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                                            textDecoration: 'none', transition: 'all .15s',
+                                            ...(sortBy === opt.value
+                                                ? { background: '#1B4332', color: 'white' }
+                                                : { background: 'white', color: '#6B7280', border: '1px solid #EDE6D6' }),
+                                        }}>
+                                        {opt.label}
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* Products Grid */}
-                {products.length === 0 ? (
-                    <div className="text-center py-24">
-                        <div className="text-5xl mb-4">🛍️</div>
-                        <p className="text-lg font-semibold mb-2" style={{ color: '#1C1C1E' }}>محصولی یافت نشد</p>
-                        <p className="text-sm" style={{ color: '#8C8C8E' }}>لطفاً فیلتر دیگری انتخاب کنید</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                        {products.map((product) => {
-                            const img = product.images?.[0]
-                            const imgSrc = imgUrl(img)
+                        {products.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+                                <div style={{ width: 72, height: 72, borderRadius: 20, background: '#F3EDE3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#C8B99A' }}>
+                                    <IconBox />
+                                </div>
+                                <p style={{ fontSize: 16, fontWeight: 700, color: '#1C1C1E', marginBottom: 6 }}>محصولی یافت نشد</p>
+                                <p style={{ fontSize: 13, color: '#8C8C8E' }}>لطفاً فیلتر دیگری انتخاب کنید</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Grid — 3 ستونه */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+                                    {products.map(p => <ShopProductCard key={p.id} product={p} />)}
+                                </div>
 
-                            const discount = product.salePrice && product.price > 0
-                                ? getDiscount(product.price, product.salePrice)
-                                : 0
-
-                            return (
-                                <Link
-                                    key={product.id}
-                                    href={`/shop/${product.slug}`}
-                                    className="group block rounded-2xl overflow-hidden border transition-all duration-300 hover:-translate-y-1"
-                                    style={{
-                                        background: 'white',
-                                        borderColor: '#EDE6D6',
-                                        boxShadow: '0 2px 8px rgba(27,67,50,0.06)',
-                                    }}
-                                >
-                                    {/* Image */}
-                                    <div
-                                        className="aspect-[4/3] overflow-hidden relative flex items-center justify-center"
-                                        style={{ background: 'linear-gradient(135deg,#EDE6D6,#DDD5C5)' }}
-                                    >
-                                        {imgSrc ? (
-                                            <img
-                                                src={imgSrc}
-                                                alt={product.title}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                                loading="lazy"
-                                            />
-                                        ) : (
-                                            <span className="text-5xl opacity-40">🛍️</span>
-                                        )}
-                                        {discount > 0 && (
-                                            <span
-                                                className="absolute top-2 right-2 text-xs font-black px-2 py-1 rounded-lg"
-                                                style={{ background: '#E53E3E', color: 'white' }}
-                                            >
-                                                {discount}% تخفیف
-                                            </span>
-                                        )}
-                                        {product.type && (
-                                            <span
-                                                className="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-lg"
-                                                style={{ background: 'rgba(27,67,50,0.85)', color: 'white' }}
-                                            >
-                                                {TYPE_LABELS[product.type] ?? product.type}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className="p-4">
-                                        <h3
-                                            className="font-bold text-[14px] line-clamp-2 mb-3 leading-relaxed transition-colors group-hover:text-[#1B4332]"
-                                            style={{ color: '#1C1C1E' }}
-                                        >
-                                            {product.title}
-                                        </h3>
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                {product.salePrice && product.salePrice < product.price ? (
-                                                    <div>
-                                                        <span className="text-[11px] line-through" style={{ color: '#C8C8CA' }}>
-                                                            {product.price.toLocaleString('fa-IR')}
-                                                        </span>
-                                                        <div className="text-[14px] font-black" style={{ color: '#1B4332' }}>
-                                                            {product.salePrice === 0
-                                                                ? 'رایگان'
-                                                                : `${product.salePrice.toLocaleString('fa-IR')} تومان`}
-                                                        </div>
+                                {/* Pagination */}
+                                {totalPages > 1 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                                        <p style={{ fontSize: 12, color: '#8C8C8E' }}>
+                                            نمایش {toFarsi((page - 1) * 24 + 1)} تا {toFarsi(Math.min(page * 24, total))} از {toFarsi(total)} محصول
+                                        </p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {page > 1 && (
+                                                <Link href={`/shop?sort=${sortBy}&page=${page - 1}${activeType ? `&type=${activeType}` : ''}`} style={{ textDecoration: 'none' }}>
+                                                    <div style={{ width: 38, height: 38, borderRadius: 10, border: '1px solid #E0D8CC', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4B5563', cursor: 'pointer' }}>
+                                                        <IconChevronR />
                                                     </div>
-                                                ) : (
-                                                    <span className="text-[14px] font-black" style={{ color: '#1B4332' }}>
-                                                        {formatPrice(product.price)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <span
-                                                className="text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors group-hover:opacity-90"
-                                                style={{ background: '#E8F5E9', color: '#1B4332' }}
-                                            >
-                                                خرید
-                                            </span>
+                                                </Link>
+                                            )}
+                                            {pagesRange.map(p => (
+                                                <Link key={p} href={`/shop?sort=${sortBy}&page=${p}${activeType ? `&type=${activeType}` : ''}`} style={{ textDecoration: 'none' }}>
+                                                    <div style={{
+                                                        width: 38, height: 38, borderRadius: 10,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                                        ...(p === page
+                                                            ? { background: '#1B4332', color: 'white', boxShadow: '0 3px 10px rgba(27,67,50,0.3)' }
+                                                            : { background: 'white', color: '#6B7280', border: '1px solid #E0D8CC' }),
+                                                    }}>
+                                                        {toFarsi(p)}
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                            {page < totalPages && (
+                                                <Link href={`/shop?sort=${sortBy}&page=${page + 1}${activeType ? `&type=${activeType}` : ''}`} style={{ textDecoration: 'none' }}>
+                                                    <div style={{ width: 38, height: 38, borderRadius: 10, border: '1px solid #E0D8CC', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4B5563', cursor: 'pointer' }}>
+                                                        <IconChevronL />
+                                                    </div>
+                                                </Link>
+                                            )}
                                         </div>
                                     </div>
-                                </Link>
-                            )
-                        })}
+                                )}
+                            </>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
         </div>
     )

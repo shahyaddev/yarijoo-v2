@@ -36,6 +36,11 @@ export class StoryController {
         );
     }
 
+    @Get(':id')
+    async getStory(@Param('id') id: string) {
+        return this.storyService.getStoryById(id);
+    }
+
     /**
      * POST /api/v1/stories/:id/view
      * Records a story view for the authenticated user (idempotent).

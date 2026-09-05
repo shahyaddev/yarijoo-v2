@@ -1,208 +1,308 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 
 interface BookPage { index: number; title: string; content: string }
-interface Book { id: string; slug: string; title: string; author: string; coverImage: string | null; price: number; isPremium: boolean }
+interface Book {
+    id: string; slug: string; title: string; author: string
+    coverImage: string | null; price: number; isPremium: boolean
+}
 interface Props { book: Book; coverSrc: string | null; pages: BookPage[] }
 
-// All themes are light-based — no dark background
-const THEMES = {
-    sepia: { bg: '#EDE0C4', page: '#FBF5E6', text: '#3D2B1F', border: '#C8B896', bar: '#F0E4C8', barText: '#3D2B1F' },
-    light: { bg: '#E8E8E8', page: '#FFFFFF', text: '#1C1C1E', border: '#DEDEDE', bar: '#F5F5F5', barText: '#1C1C1E' },
-    forest: { bg: '#C8DDD0', page: '#F2FAF5', text: '#1B4332', border: '#9DC4AE', bar: '#D8EAE0', barText: '#1B4332' },
-    night: { bg: '#2C3E50', page: '#34495E', text: '#ECF0F1', border: '#4A6278', bar: '#243342', barText: '#ECF0F1' },
+function toFarsi(n: number | string) {
+    return String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[+d])
 }
-type TK = keyof typeof THEMES
-const THEME_LIST: TK[] = ['sepia', 'light', 'forest', 'night']
-const THEME_LABELS: Record<TK, string> = { sepia: '📜 سپیا', light: '☀️ روشن', forest: '🌿 جنگلی', night: '🌙 شب' }
 
-export default function BookReaderClient({ book, coverSrc, pages }: Props) {
-    const total = pages.length
+// ─── Themes ──────────────────────────────────────────────────────────────────
+const THEMES = {
+    cream:  { label: 'کرم',    bg: '#FAF7F2', content: '#F3EDE3', text: '#2C2C2E', title: '#1B4332', border: '#DDD5C5', dot: '#1B4332' },
+    white:  { label: 'سفید',   bg: '#FFFFFF', content: '#F8F8F8', text: '#1C1C1E', title: '#1B4332', border: '#E0E0E0', dot: '#1B4332' },
+    sepia:  { label: 'سپیا',   bg: '#F5ECD7', content: '#EDE0C4', text: '#3D2B1F', title: '#5C3D1E', border: '#C8B896', dot: '#5C3D1E' },
+    forest: { label: 'جنگلی',  bg: '#E8F5EE', content: '#D8EAE0', text: '#1B3A2A', title: '#1B4332', border: '#9DC4AE', dot: '#1B4332' },
+    night:  { label: 'شب',     bg: '#1A1D23', content: '#22262E', text: '#DDE1E7', title: '#52B788', border: '#2E3440', dot: '#52B788' },
+} as const
+type ThemeKey = keyof typeof THEMES
+
+export default function BookReaderClient({ book, pages }: Props) {
     const [cur, setCur] = useState(0)
-    const [dir, setDir] = useState<'n' | 'p'>('n')
-    const [anim, setAnim] = useState(false)
-    const [fs, setFs] = useState(16)
-    const [theme, setTheme] = useState<TK>('sepia')
-    const [toc, setToc] = useState(false)
+    const [fontSize, setFontSize] = useState(17)
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [theme, setTheme] = useState<ThemeKey>('cream')
+    const topRef = useRef<HTMLDivElement>(null)
+    const total = pages.length
+    const currentPage = pages[cur] ?? null
     const t = THEMES[theme]
 
-    const goNext = useCallback(() => {
-        if (anim || cur >= total) return
-        setDir('n'); setAnim(true)
-        setTimeout(() => { setCur(p => p + 1); setAnim(false) }, 280)
-    }, [anim, cur, total])
-
-    const goPrev = useCallback(() => {
-        if (anim || cur <= 0) return
-        setDir('p'); setAnim(true)
-        setTimeout(() => { setCur(p => p - 1); setAnim(false) }, 280)
-    }, [anim, cur])
-
+    // Scroll to top on page change
     useEffect(() => {
-        const h = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') goNext()
-            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') goPrev()
-            if (e.key === 'Escape') setToc(false)
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, [cur])
+
+    // Keyboard navigation
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') prev()
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next()
+            if (e.key === 'Escape') setSettingsOpen(false)
         }
-        window.addEventListener('keydown', h)
-        return () => window.removeEventListener('keydown', h)
-    }, [goNext, goPrev])
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+    })
 
-    let tx0 = 0
-    const onTS = (e: React.TouchEvent) => { tx0 = e.touches[0].clientX }
-    const onTE = (e: React.TouchEvent) => {
-        const d = tx0 - e.changedTouches[0].clientX
-        if (d > 50) goNext()
-        if (d < -50) goPrev()
-    }
-
-    const progress = total > 0 ? Math.round((cur / total) * 100) : 0
-    const page = cur > 0 ? pages[cur - 1] : null
-
-    const coverHtml = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:380px;text-align:center;gap:18px;padding:32px 16px">
-            ${coverSrc
-            ? `<img src="${coverSrc}" alt="${book.title}" style="width:130px;border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,0.2);margin-bottom:4px"/>`
-            : '<div style="font-size:56px;margin-bottom:4px">📖</div>'}
-            <h1 style="font-size:20px;font-weight:900;line-height:1.5;margin:0;color:${t.text}">${book.title}</h1>
-            <p style="font-size:13px;margin:0;opacity:0.55;color:${t.text}">${book.author}</p>
-            <div style="width:36px;height:3px;border-radius:99px;background:#1B4332;margin:2px 0"></div>
-            <p style="font-size:12px;margin:0;opacity:0.35;color:${t.text}">${total} بخش</p>
-            <p style="font-size:11px;margin-top:6px;opacity:0.28;color:${t.text}">← → یا swipe برای ورق زدن</p>
-        </div>`
+    const prev = useCallback(() => { if (cur > 0) setCur(p => p - 1) }, [cur])
+    const next = useCallback(() => { if (cur < total - 1) setCur(p => p + 1) }, [cur, total])
 
     return (
-        <>
-            <style>{`
-                @keyframes fN{0%{transform:perspective(1200px) rotateY(0);opacity:1}45%{transform:perspective(1200px) rotateY(-10deg) scale(.97);opacity:.5}100%{transform:perspective(1200px) rotateY(0);opacity:1}}
-                @keyframes fP{0%{transform:perspective(1200px) rotateY(0);opacity:1}45%{transform:perspective(1200px) rotateY(10deg) scale(.97);opacity:.5}100%{transform:perspective(1200px) rotateY(0);opacity:1}}
-                .fn{animation:fN .28s ease}.fp{animation:fP .28s ease}
-                .rp p{margin:0 0 13px}.rp h1,.rp h2,.rp h3{margin:0 0 13px;line-height:1.5}
-                .rp ul,.rp ol{padding-right:20px;margin:0 0 13px}.rp li{margin-bottom:7px}
-                .rp strong{font-weight:700}.rp a{color:#1B4332;text-decoration:underline}
-                .rp span[style*="font-size"]{font-size:inherit!important}
-                /* scrollbar inside page */
-                .rp-scroll::-webkit-scrollbar{width:4px}.rp-scroll::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:99px}
-            `}</style>
+        <div ref={topRef} style={{ width: '100%', minHeight: '100vh', background: t.bg, display: 'flex', flexDirection: 'column', direction: 'rtl' }}>
 
-            {/* TOC */}
-            {toc && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    onClick={() => setToc(false)}>
-                    <div style={{ background: t.page, borderRadius: '20px', width: '340px', maxHeight: '68vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
-                        onClick={e => e.stopPropagation()}>
-                        <div style={{ padding: '14px 18px', borderBottom: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 800, color: t.text, fontSize: '14px' }}>فهرست مطالب</span>
-                            <button onClick={() => setToc(false)} style={{ background: 'none', border: 'none', color: t.text, cursor: 'pointer', fontSize: '20px', opacity: .4, lineHeight: 1 }}>×</button>
+            {/* ── Settings Modal ── */}
+            {settingsOpen && (
+                <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+                    onClick={() => setSettingsOpen(false)}
+                >
+                    <div
+                        style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal header */}
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid #EDE6D6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="3" />
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                                </svg>
+                                <span style={{ fontWeight: 700, color: '#1C1C1E', fontSize: 15 }}>تنظیمات خواندن</span>
+                            </div>
+                            <button onClick={() => setSettingsOpen(false)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8C8C8E', fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
                         </div>
-                        <div style={{ overflowY: 'auto' }}>
-                            <button onClick={() => { setCur(0); setToc(false) }}
-                                style={{ width: '100%', textAlign: 'right', padding: '10px 18px', background: cur === 0 ? `${t.bar}` : 'transparent', border: 'none', cursor: 'pointer', color: cur === 0 ? '#1B4332' : t.text, fontSize: '13px', fontWeight: cur === 0 ? 700 : 400, borderBottom: `1px solid ${t.border}40` }}>
-                                📖 جلد کتاب
-                            </button>
-                            {pages.map((p, i) => (
-                                <button key={i} onClick={() => { setCur(i + 1); setToc(false) }}
-                                    style={{ width: '100%', textAlign: 'right', padding: '10px 18px', background: cur === i + 1 ? `${t.bar}` : 'transparent', border: 'none', cursor: 'pointer', color: cur === i + 1 ? '#1B4332' : t.text, fontSize: '13px', fontWeight: cur === i + 1 ? 700 : 400, borderBottom: `1px solid ${t.border}30`, display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '10px', opacity: .35, minWidth: '18px' }}>{p.index}</span>
-                                    <span style={{ flex: 1 }}>{p.title}</span>
+
+                        {/* Font size preview */}
+                        <div style={{ padding: '12px 20px', background: t.content, borderBottom: '1px solid #EDE6D6', textAlign: 'center' }}>
+                            <span style={{ fontSize: `${fontSize}px`, color: t.text, fontWeight: 500 }}>نمونه متن — اندازه {toFarsi(fontSize)}</span>
+                        </div>
+
+                        {/* ── Font size ── */}
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid #F3EDE3' }}>
+                            <p style={{ fontSize: 12, color: '#8C8C8E', margin: '0 0 10px', fontWeight: 600 }}>اندازه متن</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                                {/* Increase */}
+                                <button onClick={() => setFontSize(f => Math.min(24, f + 1))}
+                                    style={{ height: 48, borderRadius: 12, background: '#1B4332', color: 'white', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontFamily: 'inherit' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg>
+                                    افزایش
                                 </button>
-                            ))}
+                                {/* Decrease */}
+                                <button onClick={() => setFontSize(f => Math.max(12, f - 1))}
+                                    style={{ height: 48, borderRadius: 12, background: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontFamily: 'inherit' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><line x1="8" y1="12" x2="16" y2="12" /></svg>
+                                    کاهش
+                                </button>
+                                {/* Reset */}
+                                <button onClick={() => setFontSize(17)}
+                                    style={{ height: 48, borderRadius: 12, background: '#E8E0D0', color: '#5C5C5E', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontFamily: 'inherit' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+                                    پیش‌فرض
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ── Theme ── */}
+                        <div style={{ padding: '16px 20px' }}>
+                            <p style={{ fontSize: 12, color: '#8C8C8E', margin: '0 0 10px', fontWeight: 600 }}>تم خواندن</p>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, th]) => (
+                                    <button key={key} onClick={() => setTheme(key)}
+                                        style={{
+                                            flex: 1, minWidth: 60, height: 52, borderRadius: 12,
+                                            background: th.content, border: `2px solid ${key === theme ? th.dot : th.border}`,
+                                            cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                                            alignItems: 'center', justifyContent: 'center', gap: 4,
+                                            transition: 'border-color .15s', fontFamily: 'inherit',
+                                            boxShadow: key === theme ? `0 0 0 2px ${th.dot}40` : 'none',
+                                        }}>
+                                        {/* Color dot */}
+                                        <div style={{ width: 14, height: 14, borderRadius: '50%', background: th.dot, border: '2px solid rgba(0,0,0,0.1)' }} />
+                                        <span style={{ fontSize: 11, color: th.text, fontWeight: key === theme ? 700 : 500 }}>{th.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Close */}
+                        <div style={{ padding: '0 20px 18px', textAlign: 'center' }}>
+                            <button onClick={() => setSettingsOpen(false)}
+                                style={{ background: 'none', border: '1px solid #EDE6D6', borderRadius: 12, padding: '8px 32px', color: '#8C8C8E', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
+                                بستن
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div style={{ background: t.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            {/* ── Top bar ── */}
+            <div style={{ background: '#1B4332', position: 'sticky', top: 0, zIndex: 100 }}>
+                <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
 
-                {/* Top bar */}
-                <div style={{ background: t.bar, borderBottom: `1px solid ${t.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    {/* Book title link */}
                     <Link href={`/books/${book.slug}`}
-                        style={{ color: t.barText, opacity: .6, display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', textDecoration: 'none', flexShrink: 0 }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
-                        خروج
+                        style={{ color: '#52B788', fontWeight: 700, fontSize: 14, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0, transition: 'opacity .2s' }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                    >
+                        {book.title}
                     </Link>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ color: t.barText, fontSize: '13px', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</p>
-                        <p style={{ color: t.barText, opacity: .5, fontSize: '11px', margin: 0 }}>{page?.title || 'جلد کتاب'}</p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <button onClick={() => setToc(true)} style={{ background: `${t.text}18`, border: 'none', color: t.barText, width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>☰</button>
-                        <button onClick={() => setFs(f => Math.max(12, f - 1))} style={{ background: `${t.text}18`, border: 'none', color: t.barText, width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 700 }}>−</button>
-                        <span style={{ color: t.barText, opacity: .5, fontSize: '11px', minWidth: '22px', textAlign: 'center' }}>{fs}</span>
-                        <button onClick={() => setFs(f => Math.min(24, f + 1))} style={{ background: `${t.text}18`, border: 'none', color: t.barText, width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 700 }}>+</button>
-                        <button onClick={() => setTheme(k => { const i = THEME_LIST.indexOf(k); return THEME_LIST[(i + 1) % THEME_LIST.length] })}
-                            style={{ background: `${t.text}18`, border: 'none', color: t.barText, height: '32px', padding: '0 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                            {THEME_LABELS[theme]}
-                        </button>
-                    </div>
-                </div>
 
-                {/* Progress bar */}
-                <div style={{ height: '3px', background: `${t.border}80`, flexShrink: 0 }}>
-                    <div style={{ height: '100%', background: '#1B4332', width: `${progress}%`, transition: 'width .3s ease' }} />
-                </div>
-
-                {/* Content area */}
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 12px', gap: '12px' }}
-                    onTouchStart={onTS} onTouchEnd={onTE}>
-
-                    {/* Prev */}
-                    <button onClick={goPrev} disabled={cur === 0}
-                        style={{ background: cur === 0 ? `${t.border}40` : `${t.text}15`, border: `1px solid ${t.border}`, color: cur === 0 ? `${t.text}40` : t.text, width: '40px', height: '40px', borderRadius: '50%', cursor: cur === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-                    </button>
-
-                    {/* Page */}
-                    <div className={anim ? (dir === 'n' ? 'fn' : 'fp') : ''}
-                        style={{
-                            width: '100%', maxWidth: '680px', minHeight: '500px', background: t.page, borderRadius: '18px',
-                            boxShadow: `0 8px 40px rgba(0,0,0,0.18), 4px 0 12px rgba(0,0,0,0.08)`,
-                            padding: '48px 40px 40px', position: 'relative',
-                            borderRight: `3px solid ${t.border}`
-                        }}>
-
-                        {/* Page indicator */}
-                        <div style={{ position: 'absolute', top: '13px', insetInline: '18px', display: 'flex', justifyContent: 'space-between', opacity: .4 }}>
-                            <span style={{ fontSize: '10px', color: t.text }}>{page?.title || 'جلد'}</span>
-                            <span style={{ fontSize: '10px', color: t.text }}>{cur} / {total}</span>
-                        </div>
-
-                        {/* Text */}
-                        <div className="rp rp-scroll"
-                            style={{ fontSize: `${fs}px`, lineHeight: '2.1', color: t.text, direction: 'rtl', textAlign: 'justify', maxHeight: '72vh', overflowY: 'auto', paddingLeft: '4px' }}
-                            dangerouslySetInnerHTML={{ __html: cur === 0 ? coverHtml : (page?.content ?? '') }}
-                        />
-
-                        {/* Corner fold */}
-                        <div style={{
-                            position: 'absolute', bottom: 0, left: 0, width: '26px', height: '26px',
-                            background: `linear-gradient(225deg,${t.page} 50%,${t.border} 50%)`, borderRadius: '0 8px 0 18px'
-                        }} />
+                    {/* Page number pills — desktop */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', flexShrink: 1, padding: '2px 0' }}
+                        className="hidden lg:flex scrollbar-none">
+                        {pages.map((_, i) => (
+                            <button key={i} onClick={() => setCur(i)}
+                                style={{
+                                    minWidth: 38, height: 38, borderRadius: 10, border: 'none',
+                                    fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                                    fontFamily: 'inherit', transition: 'all .15s',
+                                    ...(i === cur
+                                        ? { background: '#52B788', color: '#1B4332' }
+                                        : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)' }),
+                                }}
+                                onMouseEnter={e => { if (i !== cur) (e.currentTarget.style.background = 'rgba(255,255,255,0.18)') }}
+                                onMouseLeave={e => { if (i !== cur) (e.currentTarget.style.background = 'rgba(255,255,255,0.1)') }}
+                            >
+                                {toFarsi(i + 1)}
+                            </button>
+                        ))}
                     </div>
 
-                    {/* Next */}
-                    <button onClick={goNext} disabled={cur >= total}
-                        style={{ background: cur >= total ? `${t.border}40` : '#1B4332', border: `1px solid ${cur >= total ? t.border : '#1B4332'}`, color: cur >= total ? `${t.text}40` : 'white', width: '40px', height: '40px', borderRadius: '50%', cursor: cur >= total ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
-                    </button>
-                </div>
-
-                {/* Bottom bar */}
-                <div style={{ background: t.bar, borderTop: `1px solid ${t.border}`, padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                    <span style={{ color: t.barText, opacity: .4, fontSize: '11px' }}>← → یا swipe برای ورق زدن</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color: t.barText, opacity: .5, fontSize: '11px' }}>برو:</span>
-                        <input type="number" min={0} max={total} value={cur}
-                            onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0 && v <= total) setCur(v) }}
-                            style={{ background: t.page, border: `1px solid ${t.border}`, color: t.text, borderRadius: '7px', padding: '3px 6px', width: '52px', fontSize: '12px', textAlign: 'center' }} />
-                        <span style={{ color: t.barText, opacity: .4, fontSize: '11px' }}>از {total}</span>
-                    </div>
-                    <span style={{ color: t.barText, opacity: .4, fontSize: '11px' }}>
-                        {cur === 0 ? 'جلد' : `${progress}% خوانده شد`}
+                    {/* Mobile: page indicator */}
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }} className="lg:hidden">
+                        {toFarsi(cur + 1)} / {toFarsi(total)}
                     </span>
+
+                    {/* Settings button */}
+                    <button onClick={() => setSettingsOpen(true)}
+                        style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', flexShrink: 0, transition: 'background .2s' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                    </button>
                 </div>
             </div>
-        </>
+
+            {/* Progress bar */}
+            <div style={{ height: 3, background: t.border }}>
+                <div style={{ height: '100%', background: t.dot, width: `${Math.round(((cur + 1) / total) * 100)}%`, transition: 'width .3s ease' }} />
+            </div>
+
+            {/* ── Content ── */}
+            <div style={{ flex: 1, background: t.content, paddingBottom: 40 }}>
+                <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px' }}>
+
+                    {/* Chapter title */}
+                    {currentPage && (
+                        <h3 style={{
+                            fontSize: 22, fontWeight: 900, color: t.title,
+                            textAlign: 'center', padding: '24px 0 20px',
+                            borderBottom: `2px solid ${t.border}`, marginBottom: 28,
+                        }}>
+                            {currentPage.title}
+                        </h3>
+                    )}
+
+                    {/* Body text */}
+                    <div>
+                        <style>{`
+                            .reader-body p { margin: 0 0 16px; }
+                            .reader-body h1,.reader-body h2,.reader-body h3 { font-weight:700; margin:20px 0 12px; line-height:1.5; }
+                            .reader-body h2 { font-size:1.15em; }
+                            .reader-body h3 { font-size:1.05em; }
+                            .reader-body ul,.reader-body ol { padding-right:22px; margin:0 0 16px; }
+                            .reader-body li { margin-bottom:8px; }
+                            .reader-body strong { font-weight:700; }
+                            .reader-body a { text-decoration:underline; }
+                            .reader-body span[style*="font-size"] { font-size:inherit !important; }
+                        `}</style>
+                        <div
+                            className="reader-body"
+                            style={{ fontSize: `${fontSize}px`, lineHeight: 2.1, color: t.text, textAlign: 'justify', direction: 'rtl' }}
+                            dangerouslySetInnerHTML={{ __html: currentPage?.content ?? '' }}
+                        />
+                    </div>
+
+                    {/* ── Prev / Next buttons ── */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 48 }}>
+
+                        {/* Prev */}
+                        <button onClick={prev}
+                            style={{
+                                maxWidth: 180, width: '100%', height: 56, borderRadius: 16,
+                                border: `2px solid ${t.border}`, background: 'transparent',
+                                color: t.text, fontSize: 14, fontWeight: 600,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                cursor: cur === 0 ? 'not-allowed' : 'pointer',
+                                transition: 'all .2s', fontFamily: 'inherit',
+                                visibility: cur === 0 ? 'hidden' : 'visible',
+                                opacity: cur === 0 ? 0 : 1,
+                            }}
+                            onMouseEnter={e => { if (cur > 0) { (e.currentTarget as HTMLElement).style.borderColor = t.dot; (e.currentTarget as HTMLElement).style.color = t.dot } }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = t.border; (e.currentTarget as HTMLElement).style.color = t.text }}
+                        >
+                            {/* arrow right (RTL = go back) */}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                            صفحه قبلی
+                        </button>
+
+                        {/* Next */}
+                        <button onClick={next}
+                            style={{
+                                maxWidth: 340, width: '100%', height: 56, borderRadius: 16,
+                                border: 'none', background: t.dot,
+                                color: theme === 'night' ? '#1A1D23' : 'white',
+                                fontSize: 14, fontWeight: 700,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                cursor: cur >= total - 1 ? 'not-allowed' : 'pointer',
+                                transition: 'opacity .2s', fontFamily: 'inherit',
+                                boxShadow: `0 4px 16px ${t.dot}40`,
+                                visibility: cur >= total - 1 ? 'hidden' : 'visible',
+                                opacity: cur >= total - 1 ? 0 : 1,
+                            }}
+                            onMouseEnter={e => { if (cur < total - 1) (e.currentTarget as HTMLElement).style.opacity = '0.85' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+                        >
+                            صفحه بعدی
+                            {/* arrow left (RTL = go forward) */}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M19 12H5M12 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Finished */}
+                    {cur >= total - 1 && total > 0 && (
+                        <div style={{ textAlign: 'center', marginTop: 40, padding: '28px 24px', background: t.bg, borderRadius: 20, border: `1px solid ${t.border}` }}>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={t.dot} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px' }}>
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg>
+                            <p style={{ fontSize: 17, fontWeight: 700, color: t.title, marginBottom: 6 }}>کتاب به پایان رسید</p>
+                            <p style={{ fontSize: 13, color: t.text, opacity: .6, marginBottom: 20 }}>امیدواریم این کتاب برایتان مفید بوده باشد</p>
+                            <Link href={`/books/${book.slug}`}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: t.dot, color: theme === 'night' ? '#1A1D23' : 'white', textDecoration: 'none', padding: '10px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700 }}>
+                                بازگشت به کتاب
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
     )
 }
