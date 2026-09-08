@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import ShopSidebar from './ShopSidebar'
 import ShopProductCard from './ShopProductCard'
+import ShopHero from './ShopHero'
 
 export const revalidate = 300
 
@@ -53,23 +54,8 @@ const SORT_OPTIONS = [
 ]
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
-function IconShop() {
-    return (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <path d="M16 10a4 4 0 0 1-8 0" />
-        </svg>
-    )
-}
 function IconBox() {
-    return (
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.2 }}>
-            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <path d="M16 10a4 4 0 0 1-8 0" />
-        </svg>
-    )
+    return <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.2 }}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
 }
 function IconChevronR() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg> }
 function IconChevronL() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg> }
@@ -96,38 +82,9 @@ export default async function ShopPage({ searchParams }: PageProps) {
         <div style={{ background: '#FAF7F2', minHeight: '100vh', direction: 'rtl' }}>
 
             {/* ── Hero ── */}
-            <div className="section-forest" style={{ position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', inset: 0, opacity: 0.05, backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
-                <div style={{ position: 'absolute', top: -60, right: -60, width: 220, height: 220, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.07)' }} />
-                <div style={{ position: 'absolute', bottom: -40, left: -40, width: 180, height: 180, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.06)' }} />
-
-                <div className="max-w-[1280px] mx-auto px-4 py-14" style={{ position: 'relative' }}>
-                    {/* Title */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
-                        <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
-                            <IconShop />
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: 28, fontWeight: 900, color: 'white', margin: 0, lineHeight: 1.3 }}>فروشگاه یاری‌جو</h1>
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, margin: '4px 0 0' }}>
-                                محصولات تخصصی سلامت روان
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* آمار hero */}
-                    <div className="flex flex-wrap gap-3" style={{ marginTop: 4 }}>
-                        {[
-                            { label: 'محصول', value: toFarsi(total) },
-                            { label: 'پرفروش‌ترین', value: toFarsi(50) },
-                            { label: 'با تخفیف', value: toFarsi(25) },
-                        ].map(s => (
-                            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                <span style={{ fontSize: 20, fontWeight: 900, color: '#52B788' }}>{s.value}</span>
-                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{s.label}</span>
-                            </div>
-                        ))}
-                    </div>
+            <div style={{ background: '#FAF7F2', padding: '32px 16px 0' }}>
+                <div className="max-w-[1280px] mx-auto">
+                    <ShopHero total={total} />
                 </div>
             </div>
 
