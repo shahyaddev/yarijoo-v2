@@ -469,6 +469,14 @@ export function IconAngleLeft({ size = 14, color = 'currentColor', strokeWidth =
     )
 }
 
+export function IconChevronDown({ size = 14, color = 'currentColor', strokeWidth = 2 }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+        </svg>
+    )
+}
+
 // ─── Named export map (for dynamic lookup) ───────────────────────────────────
 export const ICONS = {
     brain: IconBrain, book: IconBook, pen: IconPen, play: IconPlay,

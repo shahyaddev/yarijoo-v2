@@ -11,7 +11,6 @@ import {
     IconStar,
     IconCheck,
     IconInfo,
-    IconMoney,
     IconCalendar,
 } from '@/components/ui/Icon'
 
@@ -297,14 +296,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                                     <IconPlay size={15} color="white" />
                                     {price === 0 ? 'شروع یادگیری' : 'ثبت‌نام در دوره'}
                                 </Link>
-                                {price > 0 && (
-                                    <Link href={`/checkout?course=${course.slug}`}
-                                        className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl font-bold text-sm border-2 transition-colors hover:opacity-80"
-                                        style={{ borderColor: '#1B4332', color: '#1B4332', background: 'transparent' }}>
-                                        <IconMoney size={15} color="#1B4332" />
-                                        خرید دوره
-                                    </Link>
-                                )}
                             </div>
 
                             {/* Feature list */}
