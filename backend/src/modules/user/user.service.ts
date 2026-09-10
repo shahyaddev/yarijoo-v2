@@ -55,10 +55,56 @@ export class UserService {
     }
 
     // ── Avatar ─────────────────────────────────────────────────────────
-    async getAvatarUploadUrl(userId: string): Promise<{ uploadUrl: string; objectName: string }> {
-        const objectName = `avatars/${userId}/${randomUUID()}.jpg`
-        const uploadUrl = await this.minio.getPresignedUploadUrl(objectName)
-        return { uploadUrl, objectName }
+    async getAvatarUploadUrl(userId: string): Promise<{ uploadUrl: string; objectName: string } | null> {
+        try {
+            const objectName = `avatars/${userId}/${randomUUID()}.jpg`
+            const uploadUrl = await this.minio.getPresignedUploadUrl(objectName)
+            return { uploadUrl, objectName }
+        } catch {
+            // MinIO not available — signal frontend to use direct upload
+            return null
+        }
+    }
+
+    async uploadAvatarDirect(userId: string, req: import('fastify').FastifyRequest) {
+        const multipart = req as typeof req & {
+            file?: () => Promise<{
+                filename: string
+                mimetype: string
+                file: import('stream').Readable & AsyncIterable<Buffer>
+            } | null>
+        }
+        if (!multipart.file) throw new Error('multipart not supported')
+
+        const data = await multipart.file()
+        if (!data) throw new Error('No file provided')
+
+        // Buffer the stream
+        const chunks: Buffer[] = []
+        for await (const chunk of data.file) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array))
+        }
+        const buffer = Buffer.concat(chunks)
+
+        let avatarUrl: string
+
+        try {
+            // Try MinIO first
+            const ext = data.filename?.split('.').pop() ?? 'jpg'
+            const objectName = `avatars/${userId}/${randomUUID()}.${ext}`
+            await this.minio.putObject(objectName, buffer, data.mimetype)
+            avatarUrl = this.minio.getPublicUrl(objectName)
+        } catch {
+            // Fallback: store as base64 data URL in DB (works without MinIO)
+            const mime = data.mimetype || 'image/jpeg'
+            avatarUrl = `data:${mime};base64,${buffer.toString('base64')}`
+        }
+
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { avatarUrl },
+            select: { id: true, avatarUrl: true },
+        })
     }
 
     async confirmAvatarUpload(userId: string, objectName: string) {

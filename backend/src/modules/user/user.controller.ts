@@ -7,6 +7,7 @@ import {
     Body,
     Param,
     Query,
+    Req,
     UseGuards,
     HttpCode,
     HttpStatus,
@@ -37,7 +38,15 @@ export class UserController {
     // ── Avatar ─────────────────────────────────────────────────────────
     @Post('avatar')
     @HttpCode(HttpStatus.OK)
-    getAvatarUploadUrl(@CurrentUser() user: JwtUser) {
+    async uploadAvatar(
+        @CurrentUser() user: JwtUser,
+        @Req() req: import('fastify').FastifyRequest,
+    ) {
+        return this.userService.uploadAvatarDirect(user.sub, req)
+    }
+
+    @Get('avatar/upload-url')
+    async getAvatarUploadUrl(@CurrentUser() user: JwtUser) {
         return this.userService.getAvatarUploadUrl(user.sub)
     }
 

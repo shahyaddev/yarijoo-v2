@@ -134,7 +134,7 @@ export class CartController {
     }
 }
 
-@Controller()
+@Controller('shop')
 @UseGuards(JwtAuthGuard)
 export class OrderController {
     constructor(private readonly shopService: ShopService) { }

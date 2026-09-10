@@ -41,7 +41,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 toastOptions={{
                     duration: 4000,
                     style: {
-                        fontFamily: 'var(--font-estedad, Estedad), sans-serif',
+                        fontFamily: "'Vazirmatn', Tahoma, Arial, sans-serif",
                         direction: 'rtl',
                         textAlign: 'right',
                     },

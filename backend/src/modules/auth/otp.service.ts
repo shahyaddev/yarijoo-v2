@@ -42,8 +42,9 @@ export class OtpService {
     /**
      * Send an OTP to the given phone number.
      * Enforces max 3 OTPs per 10 minutes per phone number.
+     * Returns the OTP code only in dev/test mode (no SMS provider configured).
      */
-    async sendOtp(phone: string): Promise<void> {
+    async sendOtp(phone: string): Promise<string | undefined> {
         const normalised = this.normalizePhone(phone);
 
         // Rate-limit check: count OTPs in last 10 minutes
@@ -69,7 +70,10 @@ export class OtpService {
             data: { phone: normalised, code, expiresAt },
         });
 
-        await this.sendSms(normalised, code);
+        const isDevMode = await this.sendSms(normalised, code);
+
+        // In dev mode (no SMS provider), return code so frontend can display it
+        return isDevMode ? code : undefined;
     }
 
     /**
@@ -121,13 +125,14 @@ export class OtpService {
 
     /**
      * Send SMS via Kavenegar or fallback to console.
+     * Returns true if running in dev mode (no provider configured).
      */
-    private async sendSms(phone: string, code: string): Promise<void> {
+    private async sendSms(phone: string, code: string): Promise<boolean> {
         const apiKey = this.config.get('kavenegar.apiKey', { infer: true });
 
         if (!apiKey || apiKey === '' || apiKey === 'CHANGE_ME') {
             this.logger.log(`[OTP] SMS to ${phone}: ${code}`);
-            return;
+            return true; // dev mode — no provider configured
         }
 
         try {
@@ -144,5 +149,7 @@ export class OtpService {
             this.logger.error(`[OTP] Failed to send SMS to ${phone}: ${(err as Error).message}`);
             // Don't throw — code is saved in DB, user can retry
         }
+
+        return false;
     }
 }

@@ -44,6 +44,20 @@ export class PaymentService {
         description: string,
         callbackUrl: string,
     ): Promise<{ authority: string; redirectUrl: string }> {
+        // Dev/test mode: if merchant ID is placeholder, mock the payment
+        if (
+            !this.merchantId ||
+            this.merchantId === 'SANDBOX_MERCHANT' ||
+            this.merchantId.startsWith('XXXXXXXX')
+        ) {
+            const mockAuthority = `TEST-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+            this.logger.log(`[Payment] DEV MODE — mock authority: ${mockAuthority}`)
+            // Return callback URL directly so order is immediately "paid"
+            const devCallback = callbackUrl.includes('?')
+                ? `${callbackUrl}&Authority=${mockAuthority}&Status=OK`
+                : `${callbackUrl}?Authority=${mockAuthority}&Status=OK`
+            return { authority: mockAuthority, redirectUrl: devCallback }
+        }
         const response = await axios.post<ZarinpalApiResponse<ZarinpalRequestResult>>(
             `${this.baseUrl}/request.json`,
             {
@@ -70,6 +84,11 @@ export class PaymentService {
         authority: string,
         amount: number,
     ): Promise<{ refId: number; success: boolean }> {
+        // Dev mode: TEST- authorities are always valid
+        if (authority.startsWith('TEST-')) {
+            this.logger.log(`[Payment] DEV MODE — mock verify OK for ${authority}`)
+            return { refId: Math.floor(Math.random() * 9000000) + 1000000, success: true }
+        }
         try {
             const response = await axios.post<ZarinpalApiResponse<ZarinpalVerifyResult>>(
                 `${this.baseUrl}/verify.json`,

@@ -30,7 +30,7 @@ export class TicketController {
     @Post()
     createTicket(@CurrentUser() user: JwtUser, @Body() dto: CreateTicketDto) {
         const priority = (dto.priority as TicketPriority | undefined) ?? TicketPriority.MEDIUM
-        return this.ticketService.createTicket(user.sub, dto.subject, dto.content, priority)
+        return this.ticketService.createTicket(user.sub, dto.subject, dto.content, priority, dto.imageUrl)
     }
 
     /**
@@ -62,7 +62,7 @@ export class TicketController {
         @CurrentUser() user: JwtUser,
         @Body() dto: AddMessageDto,
     ) {
-        return this.ticketService.addMessage(user.sub, id, dto.content)
+        return this.ticketService.addMessage(user.sub, id, dto.content, false, dto.imageUrl)
     }
 
     /**

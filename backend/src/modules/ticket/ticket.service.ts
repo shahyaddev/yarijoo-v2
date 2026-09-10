@@ -26,6 +26,7 @@ export class TicketService {
         subject: string,
         content: string,
         priority: TicketPriority = TicketPriority.MEDIUM,
+        imageUrl?: string,
     ) {
         const ticketNumber = await this.generateTicketNumber()
 
@@ -36,7 +37,12 @@ export class TicketService {
                 status: TicketStatus.OPEN,
                 priority,
                 messages: {
-                    create: { senderId: userId, content, isAdmin: false },
+                    create: {
+                        senderId: userId,
+                        content,
+                        isAdmin: false,
+                        ...(imageUrl ? { imageUrl } : {}),
+                    },
                 },
             },
             include: { messages: true },
@@ -72,6 +78,7 @@ export class TicketService {
         ticketId: string,
         content: string,
         isAdmin = false,
+        imageUrl?: string,
     ) {
         const ticket = await this.prisma.ticket.findFirst({
             where: { id: ticketId },
@@ -80,7 +87,13 @@ export class TicketService {
         if (!ticket) throw new NotFoundException('تیکت یافت نشد')
 
         const message = await this.prisma.ticketMessage.create({
-            data: { ticketId, senderId: userId, content, isAdmin },
+            data: {
+                ticketId,
+                senderId: userId,
+                content,
+                isAdmin,
+                ...(imageUrl ? { imageUrl } : {}),
+            },
         })
 
         // Update ticket status based on who replied

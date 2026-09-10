@@ -15,6 +15,7 @@ export interface TokenPair {
     accessToken: string;
     refreshToken: string;
     user: Omit<User, 'notificationPrefs'>;
+    isNewUser?: boolean;
 }
 
 export interface JwtPayload {
@@ -32,7 +33,7 @@ export class AuthService {
         private readonly config: ConfigService<AppConfig, true>,
     ) { }
 
-    async sendOtp(phone: string): Promise<void> {
+    async sendOtp(phone: string): Promise<string | undefined> {
         return this.otpService.sendOtp(phone);
     }
 
@@ -44,7 +45,10 @@ export class AuthService {
 
         const normalised = this.otpService.normalizePhone(phone);
 
-        // Upsert user
+        // Upsert user — track whether it's a new registration
+        const existingUser = await this.prisma.user.findUnique({ where: { phone: normalised } });
+        const isNewUser = !existingUser || !existingUser.fullName;
+
         const user = await this.prisma.user.upsert({
             where: { phone: normalised },
             update: { isVerified: true },
@@ -54,7 +58,8 @@ export class AuthService {
             },
         });
 
-        return this.issueTokens(user);
+        const tokens = await this.issueTokens(user);
+        return { ...tokens, isNewUser };
     }
 
     async issueTokens(user: User): Promise<TokenPair> {
@@ -69,17 +74,17 @@ export class AuthService {
 
         const accessToken = this.jwtService.sign(payload, {
             secret: jwtSecret,
-            expiresIn: '15m',
+            expiresIn: '7d',
         });
 
         const refreshToken = this.jwtService.sign(payload, {
             secret: refreshSecret,
-            expiresIn: '7d',
+            expiresIn: '30d',
         });
 
         // Hash and store refresh token
         const hashedToken = await bcrypt.hash(refreshToken, 10);
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
         await this.prisma.refreshToken.create({
             data: {

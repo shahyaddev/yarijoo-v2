@@ -24,7 +24,7 @@ interface AuthActions {
     setUser: (user: AuthUser | null) => void
     setAccessToken: (token: string | null) => void
     setLoading: (loading: boolean) => void
-    login: (phone: string, code: string) => Promise<void>
+    login: (phone: string, code: string) => Promise<{ isNewUser: boolean }>
     logout: () => Promise<void>
     refreshToken: () => Promise<string | null>
     fetchMe: () => Promise<void>
@@ -44,16 +44,21 @@ export const useAuthStore = create<AuthStore>()(
             setAccessToken: (token) => set({ accessToken: token }),
             setLoading: (isLoading) => set({ isLoading }),
 
-            login: async (phone: string, code: string) => {
+            login: async (phone: string, code: string): Promise<{ isNewUser: boolean }> => {
                 set({ isLoading: true })
                 try {
-                    const res = await api.post<{ data: { accessToken: string; user: AuthUser } }>('/auth/verify-otp', { phone, code })
-                    const payload = res.data?.data ?? (res.data as unknown as { accessToken: string; user: AuthUser })
+                    const res = await api.post<{ data: { accessToken: string; user: AuthUser; isNewUser?: boolean } }>('/auth/verify-otp', { phone, code })
+                    const payload = res.data?.data ?? (res.data as unknown as { accessToken: string; user: AuthUser; isNewUser?: boolean })
                     set({
                         accessToken: payload.accessToken,
                         user: payload.user,
                         isAuthenticated: true,
                     })
+                    // Set a non-HttpOnly cookie so middleware can detect auth
+                    if (typeof document !== 'undefined') {
+                        document.cookie = `access_token=${payload.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
+                    }
+                    return { isNewUser: payload.isNewUser ?? false }
                 } finally {
                     set({ isLoading: false })
                 }
@@ -68,6 +73,8 @@ export const useAuthStore = create<AuthStore>()(
                 set({ user: null, accessToken: null, isAuthenticated: false })
                 if (typeof window !== 'undefined') {
                     localStorage.removeItem('yarijoo-auth')
+                    // Clear the auth cookie
+                    document.cookie = 'access_token=; path=/; max-age=0; SameSite=Lax'
                     window.location.href = '/auth/login'
                 }
             },
@@ -81,9 +88,16 @@ export const useAuthStore = create<AuthStore>()(
                         user: payload.user,
                         isAuthenticated: true,
                     })
+                    // Keep cookie in sync
+                    if (typeof document !== 'undefined') {
+                        document.cookie = `access_token=${payload.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
+                    }
                     return payload.accessToken
                 } catch {
                     set({ user: null, accessToken: null, isAuthenticated: false })
+                    if (typeof document !== 'undefined') {
+                        document.cookie = 'access_token=; path=/; max-age=0; SameSite=Lax'
+                    }
                     return null
                 }
             },

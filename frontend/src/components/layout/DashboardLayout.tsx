@@ -6,16 +6,18 @@ import DashboardSidebar from './DashboardSidebar'
 import { useAuthStore } from '@/stores/auth.store'
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'داشبورد',
-  '/dashboard/profile': 'پروفایل من',
-  '/dashboard/my-tests': 'تستهای من',
-  '/dashboard/orders': 'سفارشات',
-  '/dashboard/appointments': 'نوبت مشاوره',
-  '/dashboard/planner': 'تقویم برنامهریزی',
-  '/dashboard/messages': 'پیامها',
-  '/dashboard/tickets': 'پشتیبانی',
-  '/dashboard/notifications': 'اعلانها',
-  '/dashboard/sms-packages': 'پکیج پیامکی',
+  '/dashboard':                       'داشبورد',
+  '/dashboard/profile':               'پروفایل من',
+  '/dashboard/my-tests':              'تست‌های من',
+  '/dashboard/courses':               'دوره‌های من',
+  '/dashboard/orders':                'سفارشات',
+  '/dashboard/educational-packages':  'پکیج‌های من',
+  '/dashboard/sms-packages':          'پکیج‌های پیامکی',
+  '/dashboard/appointments':          'نوبت مشاوره',
+  '/dashboard/planner':               'تقویم برنامه‌ریزی',
+  '/dashboard/messages':              'پیام‌ها',
+  '/dashboard/tickets':               'پشتیبانی',
+  '/dashboard/notifications':         'اعلان‌ها',
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -78,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Mobile menu toggle */}
           <button onClick={() => setMobileOpen(o => !o)}
             className="lg:hidden"
-            style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid #EDE6D6', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid #EDE6D6', background: 'white', cursor: 'pointer', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             aria-label="باز کردن منو">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />

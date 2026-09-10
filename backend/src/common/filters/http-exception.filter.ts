@@ -28,6 +28,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
                 : HttpStatus.INTERNAL_SERVER_ERROR;
 
         let message: string | string[];
+
+        // Map common English validation messages to Persian
+        const toFarsi = (msg: string | string[]): string | string[] => {
+            const map: Record<string, string> = {
+                'property message should not exist': 'فیلد message معتبر نیست. لطفاً از فیلد content استفاده کنید',
+                'content must be longer than or equal to 10 characters': 'پیام باید حداقل ۱۰ کاراکتر باشد',
+                'content must be a string': 'پیام باید متن باشد',
+                'subject must be longer than or equal to 5 characters': 'موضوع باید حداقل ۵ کاراکتر باشد',
+                'subject must be a string': 'موضوع باید متن باشد',
+                'priority must be one of the following values: LOW, MEDIUM, HIGH, URGENT': 'اولویت نامعتبر است',
+            }
+            if (Array.isArray(msg)) return msg.map(m => map[m] ?? m)
+            return map[msg] ?? msg
+        }
         let error: string;
 
         if (exception instanceof HttpException) {
@@ -57,7 +71,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
         const body: ErrorResponse = {
             statusCode,
-            message,
+            message: toFarsi(message),
             error,
             timestamp: new Date().toISOString(),
             path: request.url,

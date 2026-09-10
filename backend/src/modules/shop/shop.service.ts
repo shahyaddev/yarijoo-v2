@@ -84,12 +84,17 @@ export class ShopService {
     }
 
     async createOrder(userId: string, dto: CreateOrderDto) {
-        const cartItems = await this.cart.getCart(userId)
-        if (cartItems.length === 0) {
+        // Use items from request body if provided (bypasses Redis cart for reliability)
+        // Otherwise fall back to Redis cart
+        const rawCartItems = dto.items && dto.items.length > 0
+            ? dto.items.map(i => ({ productId: i.productId, quantity: i.quantity, addedAt: new Date().toISOString() }))
+            : await this.cart.getCart(userId)
+
+        if (rawCartItems.length === 0) {
             throw new BadRequestException('سبد خرید خالی است')
         }
 
-        const productIds = cartItems.map((i) => i.productId)
+        const productIds = rawCartItems.map((i) => i.productId)
         const products = await this.prisma.product.findMany({
             where: { id: { in: productIds }, isActive: true },
         })
@@ -97,7 +102,7 @@ export class ShopService {
         let totalAmount = 0
         const orderItems: { productId: string; quantity: number; unitPrice: number }[] = []
 
-        for (const cartItem of cartItems) {
+        for (const cartItem of rawCartItems) {
             const product = products.find((p) => p.id === cartItem.productId)
             if (!product) {
                 throw new BadRequestException(`محصول ${cartItem.productId} یافت نشد`)

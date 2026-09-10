@@ -20,7 +20,7 @@ import { JwtRefreshUser } from './strategies/jwt-refresh.strategy';
 
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_COOKIE_PATH = '/api/v1/auth';
-const REFRESH_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
+const REFRESH_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
 @Controller('auth')
 export class AuthController {
@@ -29,12 +29,15 @@ export class AuthController {
     /**
      * POST /api/v1/auth/send-otp
      * Send a 6-digit OTP to the phone number.
+     * In dev/test mode (no SMS provider configured), returns devCode in the response.
      */
     @Post('send-otp')
     @HttpCode(HttpStatus.OK)
-    async sendOtp(@Body() dto: SendOtpDto): Promise<{ message: string }> {
-        await this.authService.sendOtp(dto.phone);
-        return { message: 'کد تأیید ارسال شد' };
+    async sendOtp(@Body() dto: SendOtpDto): Promise<{ message: string; devCode?: string }> {
+        const devCode = await this.authService.sendOtp(dto.phone);
+        const res: { message: string; devCode?: string } = { message: 'کد تأیید ارسال شد' };
+        if (devCode) res.devCode = devCode;
+        return res;
     }
 
     /**
@@ -46,8 +49,8 @@ export class AuthController {
     async verifyOtp(
         @Body() dto: VerifyOtpDto,
         @Res({ passthrough: true }) reply: FastifyReply,
-    ): Promise<{ accessToken: string; user: object }> {
-        const { accessToken, refreshToken, user } = await this.authService.verifyOtp(
+    ): Promise<{ accessToken: string; user: object; isNewUser?: boolean }> {
+        const { accessToken, refreshToken, user, isNewUser } = await this.authService.verifyOtp(
             dto.phone,
             dto.code,
         );
@@ -60,7 +63,7 @@ export class AuthController {
             maxAge: REFRESH_MAX_AGE,
         });
 
-        return { accessToken, user };
+        return { accessToken, user, isNewUser };
     }
 
     /**
