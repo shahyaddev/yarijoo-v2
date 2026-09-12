@@ -12,11 +12,10 @@ interface Question { id: string; text: string; order: number; options: Option[] 
 interface Test { id: string; slug: string; title: string; category: string; description: string | null; duration: number | null; questions: Question[] }
 
 const DEFAULT_OPTIONS = [
-    { value: '0', label: 'اصلاً', score: 0 },
-    { value: '1', label: 'کمی', score: 1 },
-    { value: '2', label: 'متوسط', score: 2 },
-    { value: '3', label: 'زیاد', score: 3 },
-    { value: '4', label: 'خیلی زیاد', score: 4 },
+    { value: '0', label: 'اصلاً',               score: 0 },
+    { value: '1', label: 'چند روز',             score: 1 },
+    { value: '2', label: 'بیش از نیمی از روزها', score: 2 },
+    { value: '3', label: 'تقریباً هر روز',      score: 3 },
 ]
 
 export default function TestPage() {
@@ -88,7 +87,13 @@ export default function TestPage() {
 
     if (error || !test) return (
         <div style={{ background: '#FAF7F2', minHeight: '100vh' }} className="flex flex-col items-center justify-center gap-4">
-            <div className="text-5xl">🧠</div>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: '#E8F5E9' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
+                    <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
+                    <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
+                </svg>
+            </div>
             <p style={{ color: '#8C8C8E' }}>{error || 'تست یافت نشد'}</p>
             <Link href="/tests" className="px-6 py-2.5 rounded-xl text-white font-bold" style={{ background: '#1B4332' }}>بازگشت</Link>
         </div>
@@ -113,8 +118,14 @@ export default function TestPage() {
 
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                         className="rounded-2xl border p-8 text-center" style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                        <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-5"
-                            style={{ background: '#E8F5E9' }}>🧠</div>
+                        <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5"
+                            style={{ background: '#E8F5E9' }}>
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
+                                <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
+                                <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
+                            </svg>
+                        </div>
                         <span className="text-xs font-semibold px-3 py-1 rounded-full mb-3 inline-block"
                             style={{ background: '#F3EDE3', color: '#8C8C8E' }}>{test.category}</span>
                         <h1 className="text-xl font-black mb-3" style={{ color: '#1C1C1E' }}>{test.title}</h1>
@@ -124,8 +135,18 @@ export default function TestPage() {
                             </p>
                         )}
                         <div className="flex items-center justify-center gap-6 mb-6 text-sm" style={{ color: '#8C8C8E' }}>
-                            {questions.length > 0 && <span>❓ {questions.length} سوال</span>}
-                            {test.duration && <span>⏱ {test.duration} دقیقه</span>}
+                            {questions.length > 0 && (
+                                <span className="flex items-center gap-1.5">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                                    {questions.length} سوال
+                                </span>
+                            )}
+                            {test.duration && (
+                                <span className="flex items-center gap-1.5">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    {test.duration} دقیقه
+                                </span>
+                            )}
                             <span className="font-semibold px-2 py-0.5 rounded-full" style={{ background: '#E8F5E9', color: '#1B4332' }}>رایگان</span>
                         </div>
                         <button onClick={startTest}
@@ -146,7 +167,12 @@ export default function TestPage() {
     if (questions.length === 0) {
         return (
             <div style={{ background: '#FAF7F2', minHeight: '100vh' }} className="flex flex-col items-center justify-center gap-4 px-5">
-                <div className="text-5xl">🔧</div>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: '#FEF9C3' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#854D0E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                        <path d="M12 9v4"/><path d="M12 17h.01"/>
+                    </svg>
+                </div>
                 <p className="text-center" style={{ color: '#5C5C5E' }}>سوالات این تست هنوز بارگذاری نشده‌اند</p>
                 <Link href="/tests" className="px-6 py-2.5 rounded-xl text-white font-bold" style={{ background: '#1B4332' }}>بازگشت</Link>
             </div>
@@ -225,7 +251,10 @@ export default function TestPage() {
                     )}
                 </div>
 
-                {error && <p className="text-center mt-4 text-sm font-semibold" style={{ color: '#C62828' }}>⚠️ {error}</p>}
+                {error && <p className="text-center mt-4 text-sm font-semibold flex items-center justify-center gap-1.5" style={{ color: '#C62828' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    {error}
+                </p>}
 
                 {/* Answered count */}
                 <p className="text-center mt-4 text-xs" style={{ color: '#8C8C8E' }}>

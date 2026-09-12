@@ -71,7 +71,11 @@ export default async function PsychologistsPage() {
             <div className="max-w-7xl mx-auto px-5 py-10">
                 {psychologists.length === 0 ? (
                     <div className="text-center py-24">
-                        <div className="text-5xl mb-4">👩‍⚕️</div>
+                        <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: '#E8F5E9' }}>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
                         <p className="text-lg font-semibold" style={{ color: '#1C1C1E' }}>در حال بارگذاری...</p>
                     </div>
                 ) : (
@@ -95,8 +99,11 @@ export default async function PsychologistsPage() {
                                             <div className="min-w-0">
                                                 <h2 className="font-black text-[16px] truncate" style={{ color: '#1C1C1E' }}>{name}</h2>
                                                 {psy.isVerified && (
-                                                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-1"
-                                                        style={{ background: '#E8F5E9', color: '#1B4332' }}>✅ تأیید شده</span>
+                                                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1"
+                                                        style={{ background: '#E8F5E9', color: '#1B4332' }}>
+                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                        تأیید شده
+                                                    </span>
                                                 )}
                                             </div>
                                         </div>
@@ -138,11 +145,12 @@ export default async function PsychologistsPage() {
                                                     {psy.hourlyRate.toLocaleString('fa-IR')} تومان
                                                 </p>
                                             </div>
-                                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full`}
+                                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1`}
                                                 style={psy.isAvailable
                                                     ? { background: '#E8F5E9', color: '#1B4332' }
                                                     : { background: '#FCE4EC', color: '#C62828' }}>
-                                                {psy.isAvailable ? '🟢 آنلاین' : '🔴 ناموجود'}
+                                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: psy.isAvailable ? '#059669' : '#DC2626' }} />
+                                                {psy.isAvailable ? 'آنلاین' : 'ناموجود'}
                                             </span>
                                         </div>
 

@@ -83,6 +83,21 @@ export class ShopService {
         return product
     }
 
+    async getUserOrders(userId: string, limit = 50) {
+        return this.prisma.order.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            include: {
+                items: {
+                    include: {
+                        product: { select: { title: true } },
+                    },
+                },
+            },
+        })
+    }
+
     async createOrder(userId: string, dto: CreateOrderDto) {
         // Use items from request body if provided (bypasses Redis cart for reliability)
         // Otherwise fall back to Redis cart

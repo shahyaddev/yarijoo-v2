@@ -68,7 +68,11 @@ export default function UserSmsPackagesPage() {
                 </div>
             ) : subs.length === 0 ? (
                 <div className="text-center py-20 rounded-2xl border" style={{ background: 'white', borderColor: '#EDE6D6' }}>
-                    <div className="text-5xl mb-4">📱</div>
+                    <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: '#E8F5E9' }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                    </div>
                     <p className="font-semibold mb-2" style={{ color: '#1C1C1E' }}>اشتراکی ندارید</p>
                     <p className="text-sm mb-6" style={{ color: '#8C8C8E' }}>با خرید پکیج پیامکی، هر روز یک پیام انگیزشی دریافت کنید</p>
                     <a href="/shop" className="inline-block px-6 py-2.5 rounded-xl text-white text-sm font-bold"
@@ -88,9 +92,11 @@ export default function UserSmsPackagesPage() {
                                     onClick={() => setExpanded(isOpen ? null : sub.id)}
                                 >
                                     <div className="flex items-start gap-4">
-                                        <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
+                                        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
                                             style={{ background: '#E8F5E9' }}>
-                                            📱
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B4332" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                            </svg>
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2">
@@ -117,7 +123,9 @@ export default function UserSmsPackagesPage() {
 
                                             {/* Next send */}
                                             <div className="flex items-center gap-1.5 mt-2.5 text-xs" style={{ color: '#8C8C8E' }}>
-                                                <span>⏰</span>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                                </svg>
                                                 <span>ارسال بعدی: {formatNextSend(sub.next_send_at)}</span>
                                             </div>
                                         </div>

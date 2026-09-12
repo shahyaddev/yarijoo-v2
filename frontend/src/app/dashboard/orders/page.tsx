@@ -224,7 +224,11 @@ export default function OrdersPage() {
     useEffect(() => {
         api.get('/shop/orders?limit=50')
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .then(r => setOrders((r.data as any)?.data?.orders ?? []))
+            .then(r => {
+                const raw = (r.data as any)?.data
+                // ResponseInterceptor wraps array directly in data
+                setOrders(Array.isArray(raw) ? raw : (raw?.orders ?? []))
+            })
             .catch(() => setOrders([]))
             .finally(() => setLoading(false))
     }, [])

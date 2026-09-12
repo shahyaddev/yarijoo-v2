@@ -70,7 +70,11 @@ export default function AppointmentCallbackPage() {
 
                 {status === 'success' && (
                     <>
-                        <div className="text-6xl mb-4">✅</div>
+                        <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: '#D1FAE5' }}>
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#065F46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
                         <h2 className="text-xl font-black mb-2" style={{ color: '#1B4332' }}>پرداخت موفق</h2>
                         <p className="text-sm mb-1" style={{ color: '#2D6A4F' }}>نوبت مشاوره شما با موفقیت رزرو شد</p>
                         {result?.refId && (
@@ -89,7 +93,11 @@ export default function AppointmentCallbackPage() {
 
                 {status === 'failed' && (
                     <>
-                        <div className="text-6xl mb-4">❌</div>
+                        <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: '#FEE2E2' }}>
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </div>
                         <h2 className="text-xl font-black mb-2" style={{ color: '#C62828' }}>پرداخت ناموفق</h2>
                         <p className="text-sm mb-4" style={{ color: '#8C8C8E' }}>
                             {result?.message ?? 'پرداخت انجام نشد یا توسط شما لغو شد.'}
@@ -112,7 +120,12 @@ export default function AppointmentCallbackPage() {
 
                 {status === 'error' && (
                     <>
-                        <div className="text-6xl mb-4">⚠️</div>
+                        <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: '#FEF9C3' }}>
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#CA8A04" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                <path d="M12 9v4"/><path d="M12 17h.01"/>
+                            </svg>
+                        </div>
                         <h2 className="text-xl font-black mb-2" style={{ color: '#C9A84C' }}>خطای غیرمنتظره</h2>
                         <p className="text-sm mb-6" style={{ color: '#8C8C8E' }}>
                             در پردازش پرداخت مشکلی پیش آمد. با پشتیبانی تماس بگیرید.

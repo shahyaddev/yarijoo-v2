@@ -133,11 +133,11 @@ export default function CheckoutPage() {
             const d = (res.data as any)?.data
 
             if (d?.redirectUrl) {
-                // Zarinpal redirect
-                clearCart()
+                // Redirect to payment gateway — do NOT clear cart here
+                // Cart will be cleared on successful callback
                 window.location.href = d.redirectUrl
             } else if (d?.orderId) {
-                // No payment gateway (test mode / free order)
+                // Test mode / free order — clear and go to orders
                 clearCart()
                 router.push(`/dashboard/orders`)
             } else {

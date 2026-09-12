@@ -139,11 +139,25 @@ export class CartController {
 export class OrderController {
     constructor(private readonly shopService: ShopService) { }
 
+    @Get('orders')
+    getOrders(
+        @CurrentUser() user: JwtUser,
+        @Query('limit') limit?: string,
+    ) {
+        return this.shopService.getUserOrders(user.sub, limit ? parseInt(limit) : 50)
+    }
+
     @Post('orders')
     @HttpCode(HttpStatus.OK)
     createOrder(@CurrentUser() user: JwtUser, @Body() dto: CreateOrderDto) {
         return this.shopService.createOrder(user.sub, dto)
     }
+}
+
+// Separate controller — no auth needed for payment gateway callbacks
+@Controller('shop')
+export class PaymentCallbackController {
+    constructor(private readonly shopService: ShopService) { }
 
     @Post('payments/verify')
     @HttpCode(HttpStatus.OK)

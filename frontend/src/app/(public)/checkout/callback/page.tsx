@@ -1,32 +1,35 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import api from '@/lib/api'
+import { useCartStore } from '@/stores/cart.store'
 
 export default function CheckoutCallbackPage() {
     const searchParams = useSearchParams()
-    const router = useRouter()
+    const { clearCart } = useCartStore()
     const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading')
     const [refId, setRefId] = useState<string>('')
     const [orderId, setOrderId] = useState<string>('')
 
     useEffect(() => {
         const authority = searchParams.get('Authority') ?? searchParams.get('authority')
-        const statusParam = searchParams.get('Status') ?? searchParams.get('status')
-        const orderIdParam = searchParams.get('orderId')
+        const statusParam = searchParams.get('Status') ?? searchParams.get('status') ?? 'OK'
 
         if (!authority) {
             setStatus('failed')
             return
         }
 
-        api.post('/shop/payments/verify', { authority, status: statusParam, orderId: orderIdParam })
+        // verifyPayment uses @Query params on a POST endpoint
+        api.post(`/shop/payments/verify?Authority=${encodeURIComponent(authority)}&Status=${encodeURIComponent(statusParam)}`, {})
             .then(res => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const d = (res.data as any)?.data
                 if (d?.success) {
                     setRefId(String(d.refId ?? ''))
                     setOrderId(String(d.orderId ?? ''))
+                    clearCart()   // Clear cart only on confirmed success
                     setStatus('success')
                 } else {
                     setStatus('failed')
